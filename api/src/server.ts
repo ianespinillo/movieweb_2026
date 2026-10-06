@@ -30,5 +30,12 @@ app.use('/api/tmdb', tmdbRouter);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
-await connectMongo();
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+async function bootstrap() {
+  await connectMongo();
+  app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+}
+
+bootstrap().catch((err) => {
+  console.error('Failed to start API:', err);
+  process.exit(1);
+});
