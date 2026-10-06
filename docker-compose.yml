@@ -50,7 +50,10 @@ services:
       - ./api:/app
       - /app/node_modules
     env_file:
-      - ./api/.env
+      # required:false permite arrancar aunque falte el archivo (se auto-genera
+      # desde api/.env.example con INICIAR.cmd); sin TMDB_API_KEY no habrá posters.
+      - path: ./api/.env
+        required: false
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
@@ -66,6 +69,12 @@ services:
         condition: service_healthy
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3500/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
 
   # ─── Frontend: Angular 22 (Standalone + Signals) ────────────────────────────
   web:
@@ -82,7 +91,8 @@ services:
     environment:
       BROWSER: none
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:

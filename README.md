@@ -2,6 +2,32 @@
 
 ## Trabajo Práctico: MovieWeb
 
+## Puesta en marcha rápida
+
+**Prerrequisito único:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y corriendo. No hace falta instalar Node, PostgreSQL ni MongoDB: todo corre dentro de los contenedores.
+
+**Windows:**
+
+1. Doble clic en **`INICIAR.cmd`**.
+2. Esperá a que aparezca **`TODO LISTO`**.
+3. Abrí **http://localhost:4200**.
+
+| Acción | Cómo |
+|---|---|
+| Detener todo (guarda los datos) | doble clic en `DETENER.cmd` |
+| Borrar y recrear la base desde cero | doble clic en `RESET_BD.cmd` (pide confirmación) |
+| Ver los logs en vivo | `docker compose logs -f` |
+| Levantar a mano sin scripts | `docker compose up --build` |
+
+**macOS / Linux:**
+
+```bash
+cp api/.env.example api/.env   # solo la primera vez
+docker compose up --build
+```
+
+Si algo falla, los scripts te dicen el error en castellano y qué hacer. El detalle técnico está en `docker compose logs`.
+
 ### Objetivos
 El objetivo principal de este trabajo práctico es adquirir experiencia en el desarrollo de una aplicación web que interactúa con una base de datos `PostgreSQL`. La aplicación se llama **MovieWeb** y tiene como objetivo permitir a los usuarios buscar películas, actores y directores, explorar la información detallada de películas, y buscar películas relacionadas a través de palabras clave.
 También se pretende conocer el uso básico de bases de datos NoSQL, como MongoDB.
@@ -10,6 +36,8 @@ También se pretende conocer el uso básico de bases de datos NoSQL, como MongoD
 
 ### Instalación de software
 Para realizar el TP se deberá instalar el siguiente software:
+
+> **Nota:** si seguís la *Puesta en marcha rápida* con Docker, no hace falta instalar nada de lo anterior. PostgreSQL, MongoDB y Node corren adentro de los contenedores.
 
 1.  **Node.js y npm (Node Package Manager):** para ejecutar la aplicación web en un servidor local.
 2.  **PostgreSQL:** para gestionar la base de datos `movies` que contiene la información de películas, actores, directores, etc.
@@ -48,6 +76,8 @@ Se proporciona código prefabricado que servirá como punto de partida para el d
 Se deben completar las siguientes tareas como parte de este TP:
 
 #### 1. Configuración del entorno:
+> **Con Docker esto queda resuelto con `INICIAR.cmd`** (ver *Puesta en marcha rápida*). Los pasos de abajo son solo si vas a correr todo a mano, sin contenedores.
+
 *   Instalar `Node.js`.
 *   Instalar `PostgreSQL` y la base de datos `movies` (ver instrucciones en carpeta `db`).
 *   Instalar `MongoDB`.
