@@ -13,22 +13,21 @@ Una guía por integrante. Cada archivo es autocontenido: pegarlo junto con `CONT
 > **Variables de entorno nuevas:** agregar `JWT_SECRET=una-cadena-secreta-larga` en `api/.env`.
 
 
-## Flujo de trabajo con Docker (cero renegar con consolas)
+## Flujo de trabajo (npm + Turborepo)
 
 ```bash
-# Un solo comando en la raíz del repo levanta TODO:
-# - PostgreSQL 16 (con seed automático de movies y users)
-# - MongoDB 7
+# Un solo comando en la raíz del repo levanta API + frontend:
 # - API Express TS (puerto 3500, con hot-reload al editar en api/src)
 # - Angular 22 (puerto 4200, con hot-reload al editar en web/src)
+# Requiere PostgreSQL y MongoDB nativos corriendo.
 npm run dev
 ```
 
-> **Para reiniciar la base desde cero limpia:** `npm run dev:clean`
-> **Para apagar todo:** `npm run dev:down`
+> **Para reconstruir la base PostgreSQL desde cero:** `RESET_BD.cmd` (o `psql -f db/00_load_all.sql`).
+> **Para parar todo:** `Ctrl+C` en la ventana (o `DETENER.cmd`).
 
 ```
-Arrancan todos con: npm run dev
+Arranca todo con: npm run dev
   ↓
 A y B editan en api/src/routes/ ─────────────┐ (hot-reload automático)
 C y D editan en web/src/app/features/ ───────┤ (hot-reload automático)

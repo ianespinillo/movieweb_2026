@@ -27,12 +27,12 @@ web/src/app/features/profile/
 
 ---
 
-## Setup previo (con Docker, cero lío)
+## Setup previo (npm + Turborepo)
 
 ```bash
-# En la raíz del proyecto
+# En la raíz del proyecto (requiere PostgreSQL y MongoDB nativos corriendo)
 npm run dev
-# Listo! Levanta Postgres, Mongo, API y Angular.
+# Listo! Levanta la API (puerto 3500) y el frontend (4200).
 ```
 
 ---

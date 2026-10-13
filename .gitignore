@@ -3,13 +3,15 @@
 api/.env
 !api/.env.example
 
-# Angular build output
-web/dist/
+# Builds (Angular / TypeScript)
+dist/
+
+# Cache de Turborepo
+.turbo/
 
 # Directorio de dependencias de Node.js.
 # Se puede regenerar en cualquier momento ejecutando "npm install".
 node_modules/
-package-lock.json
 
 # Logs de NPM
 npm-debug.log*

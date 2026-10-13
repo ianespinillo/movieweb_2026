@@ -4,29 +4,31 @@
 
 ## Puesta en marcha rápida
 
-**Prerrequisito único:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y corriendo. No hace falta instalar Node, PostgreSQL ni MongoDB: todo corre dentro de los contenedores.
+**Prerrequisitos:** [Node.js](https://nodejs.org) 20+ (incluye npm), y **PostgreSQL** y
+**MongoDB** instalados y corriendo en tu máquina (puertos por defecto `5432` y `27017`).
+El proyecto es un **monorepo npm** (carpetas `api/` y `web/`) orquestado con
+[Turborepo](https://turbo.build).
 
 **Windows:**
 
-1. Doble clic en **`INICIAR.cmd`**.
-2. Esperá a que aparezca **`TODO LISTO`**.
-3. Abrí **http://localhost:4200**.
+1. Doble clic en **`INICIAR.cmd`** (instala dependencias y levanta API + frontend).
+2. Esperá a que la app responda en **http://localhost:4200**.
 
 | Acción | Cómo |
 |---|---|
-| Detener todo (guarda los datos) | doble clic en `DETENER.cmd` |
-| Borrar y recrear la base desde cero | doble clic en `RESET_BD.cmd` (pide confirmación) |
-| Ver los logs en vivo | `docker compose logs -f` |
-| Levantar a mano sin scripts | `docker compose up --build` |
+| Detener todo | doble clic en `DETENER.cmd` (o `Ctrl+C` en la ventana) |
+| Recrear la base PostgreSQL desde cero | doble clic en `RESET_BD.cmd` (pide confirmación) |
+| Healthcheck de la API | http://localhost:3500/api/health |
 
-**macOS / Linux:**
+**Cualquier sistema operativo (a mano):**
 
 ```bash
-cp api/.env.example api/.env   # solo la primera vez
-docker compose up --build
+npm install    # instala api + web (workspaces) y turbo
+npm run dev    # levanta api (3500) y web (4200) con Turborepo
 ```
 
-Si algo falla, los scripts te dicen el error en castellano y qué hacer. El detalle técnico está en `docker compose logs`.
+La primera vez, cargá la base `movies` siguiendo `db/instrucciones.txt` (o usá `RESET_BD.cmd`).
+Si `api/.env` no existe, se crea automáticamente a partir de `api/.env.example`.
 
 ### Objetivos
 El objetivo principal de este trabajo práctico es adquirir experiencia en el desarrollo de una aplicación web que interactúa con una base de datos `PostgreSQL`. La aplicación se llama **MovieWeb** y tiene como objetivo permitir a los usuarios buscar películas, actores y directores, explorar la información detallada de películas, y buscar películas relacionadas a través de palabras clave.
@@ -37,7 +39,7 @@ También se pretende conocer el uso básico de bases de datos NoSQL, como MongoD
 ### Instalación de software
 Para realizar el TP se deberá instalar el siguiente software:
 
-> **Nota:** si seguís la *Puesta en marcha rápida* con Docker, no hace falta instalar nada de lo anterior. PostgreSQL, MongoDB y Node corren adentro de los contenedores.
+> **Nota:** para el TP necesitás PostgreSQL, MongoDB, Node.js y un editor. La *Puesta en marcha rápida* solo automatiza el arranque de `api` + `web`; las bases corren nativas en tu máquina.
 
 1.  **Node.js y npm (Node Package Manager):** para ejecutar la aplicación web en un servidor local.
 2.  **PostgreSQL:** para gestionar la base de datos `movies` que contiene la información de películas, actores, directores, etc.
@@ -76,7 +78,7 @@ Se proporciona código prefabricado que servirá como punto de partida para el d
 Se deben completar las siguientes tareas como parte de este TP:
 
 #### 1. Configuración del entorno:
-> **Con Docker esto queda resuelto con `INICIAR.cmd`** (ver *Puesta en marcha rápida*). Los pasos de abajo son solo si vas a correr todo a mano, sin contenedores.
+> **Con `INICIAR.cmd` o `npm run dev` el arranque queda resuelto** (ver *Puesta en marcha rápida*). Los pasos de abajo cubren la instalación de las bases y las dependencias.
 
 *   Instalar `Node.js`.
 *   Instalar `PostgreSQL` y la base de datos `movies` (ver instrucciones en carpeta `db`).
@@ -85,11 +87,11 @@ Se deben completar las siguientes tareas como parte de este TP:
 *   Instalar dependencias y ejecutar la aplicación:
 
     ```bash
-    # Instalar dependencias del proyecto
+    # Instalar dependencias (api + web) y turbo
     npm install
     
-    # Ejecutar la aplicación
-    node app.js
+    # Levantar API (3500) y frontend (4200) con Turborepo
+    npm run dev
     ```
 
 #### 2. Desarrollo de funcionalidades:

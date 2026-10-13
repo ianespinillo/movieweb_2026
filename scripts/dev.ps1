@@ -1,12 +1,13 @@
 ﻿#Requires -Version 5.1
 <#
-  MovieWeb - entorno de desarrollo a prueba de boludos (APB)
+  MovieWeb - arranque de desarrollo (npm + Turborepo).
 
   Uso:
-    scripts\dev.ps1                -> levanta todo (start)
-    scripts\dev.ps1 -Action stop   -> detiene los contenedores (los datos quedan)
-    scripts\dev.ps1 -Action reset  -> borra y recrea la base desde cero (pide confirmación)
+    scripts\dev.ps1                -> instala dependencias (si hace falta) y levanta API + frontend
+    scripts\dev.ps1 -Action stop   -> libera los puertos 3500 y 4200
+    scripts\dev.ps1 -Action reset  -> recrea la base PostgreSQL 'movies' desde db/ (pide confirmación)
 
+  Requiere Node.js 20+ y PostgreSQL / MongoDB nativos (no hay contenedores).
   En Windows lo normal es ejecutar los .cmd de la raíz (INICIAR / DETENER / RESET_BD).
 #>
 [CmdletBinding()]
@@ -18,13 +19,7 @@ param(
 $ErrorActionPreference = 'Continue'
 
 $root = Split-Path -Parent $PSScriptRoot
-if (-not (Test-Path (Join-Path $root 'docker-compose.yml'))) {
-    Write-Host 'No encuentro docker-compose.yml al lado de scripts/. El repo está incompleto o el archivo se movió.' -ForegroundColor Red
-    exit 1
-}
 Set-Location $root
-
-# ─── Helpers ────────────────────────────────────────────────────────────────
 
 function Say([string]$msg, [string]$color = 'Gray') {
     Write-Host $msg -ForegroundColor $color
@@ -42,57 +37,18 @@ function Fail([string]$msg, [string]$hint = '') {
     exit 1
 }
 
-function Assert-Docker {
-    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        Fail 'No tenés Docker instalado.' @'
-1) Baja e instalá Docker Desktop: https://www.docker.com/products/docker-desktop/
-2) Reiniciá la PC.
-3) Volvé a ejecutar este archivo.
-'@
-    }
-    & docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Fail 'Docker está instalado pero no está funcionando.' @'
-1) Abrí Docker Desktop.
-2) Esperá a que el icono de la bandeja diga "Docker Desktop is running".
-3) Volvé a ejecutar este archivo.
-'@
-    }
-    & docker compose version *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Fail 'Tu Docker no trae el plugin de Compose (falla "docker compose").' `
-            'Actualizá Docker Desktop a la última versión y volvé a intentar.'
-    }
-}
-
-function Ensure-EnvFile {
+function Get-EnvMap {
+    # Lee api/.env a un hashtable SIN imprimir sus valores.
+    $map = @{}
     $envPath = Join-Path $root 'api\.env'
-    $examplePath = Join-Path $root 'api\.env.example'
-    if (-not (Test-Path $envPath)) {
-        if (-not (Test-Path $examplePath)) {
-            Fail 'Faltan api/.env y api/.env.example: no hay cómo configurar la API.' `
-                'Pedile al que subió el repo que incluya api/.env.example (que api/.env real esté en .gitignore es normal).'
+    if (Test-Path $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$') {
+                $map[$Matches[1]] = $Matches[2].Trim('"').Trim("'")
+            }
         }
-        try {
-            Copy-Item -LiteralPath $examplePath -Destination $envPath -ErrorAction Stop
-        } catch {
-            Fail 'No pude crear api/.env a partir del ejemplo.' `
-                "Copiá manualmente: copiá api/.env.example y pegalo como api/.env. Detalle: $($_.Exception.Message)"
-        }
-        Say '  Se creó api/.env a partir de api/.env.example' 'DarkGray'
     }
-    # Aviso de TMDB sin mostrar valores del archivo
-    $envText = Get-Content -LiteralPath $envPath -Raw -ErrorAction SilentlyContinue
-    if ($envText -notmatch '(?m)^\s*TMDB_API_KEY\s*=\s*\S') {
-        Say '  AVISO: TMDB_API_KEY está vacía o ausente en api/.env: no se van a ver posters, fotos ni trailers.' 'Yellow'
-        Say '  (Key gratis en https://www.themoviedb.org/settings/api -> pegala en api/.env y volvé a levantar)' 'Yellow'
-    }
-}
-
-function Get-RunningServices {
-    $out = & docker compose ps --status running --services
-    if ($LASTEXITCODE -ne 0) { return @() }
-    return @($out | Where-Object { $_ -and "$_".Trim() })
+    return $map
 }
 
 function Test-PortInUse([int]$port) {
@@ -108,218 +64,133 @@ function Test-PortInUse([int]$port) {
     }
 }
 
-function Assert-PortsFree([string[]]$running) {
-    # Ojo: nada de claves Int32 en [ordered]/hashtable -> PowerShell resuelve mal
-    # el indexer y devuelve null. Usamos lista de objetos.
-    #
-    # Puertos DUROS (de la app): si los ocupa otro, el stack no puede funcionar -> error.
-    # Puertos de BASE DE DATOS: un PostgreSQL/MongoDB nativo de Windows convive
-    # (Docker bindea igual); solo avisamos, porque bloquear rompería el arranque
-    # en máquinas como la del profe, donde el PG nativo está siempre encendido.
-    $hard = @(
-        @{ Port = 4200;  Service = 'web';  Label = 'frontend Angular' }
-        @{ Port = 3500;  Service = 'api';  Label = 'la API' }
-    )
-    $soft = @(
-        @{ Port = 5432;  Service = 'postgres'; Label = 'PostgreSQL' }
-        @{ Port = 27017; Service = 'mongo';    Label = 'MongoDB' }
-    )
-    $busy = @()
-    foreach ($entry in $hard) {
-        if ($running -contains $entry.Service) { continue }
-        if (Test-PortInUse $entry.Port) { $busy += "$($entry.Port) ($($entry.Label))" }
+function Assert-Node {
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Fail 'No tenés Node.js instalado.' 'Instalá Node 20 o superior desde https://nodejs.org y volvé a ejecutar.'
     }
-    if ($busy.Count -gt 0) {
-        Fail ('No pude usar estos puertos porque ya están ocupados por otro programa: ' + ($busy -join ', ')) @'
-Si el culpable es otra app (XAMPP, otro proyecto, un servidor que dejaste corriendo), cerrala y volvé a ejecutar este archivo.
-Si es un servidor de "algo raro", reiniciá la PC y probá de nuevo.
-'@
+    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Fail 'No tenés npm disponible.' 'Reinstalá Node.js (npm viene incluido) desde https://nodejs.org.'
     }
-    $softBusy = @()
-    foreach ($entry in $soft) {
-        if ($running -contains $entry.Service) { continue }
-        if (Test-PortInUse $entry.Port) { $softBusy += "$($entry.Port) ($($entry.Label))" }
-    }
-    if ($softBusy.Count -gt 0) {
-        Say ('  AVISO: el puerto ' + ($softBusy -join ', ') + ' ya lo usa otra instalación (¿PostgreSQL o MongoDB nativos de Windows?).') 'Yellow'
-        Say '  Igual voy a intentar levantar: si más abajo falla algo de la base, detené esos servicios' 'Yellow'
-        Say '  (Inicio -> escribí "Servicios" -> PostgreSQL/MongoDB -> Detener) y volvé a ejecutar.' 'Yellow'
-    }
+    Say ("  Node {0}  /  npm {1}" -f (& node -v), (& npm -v)) 'DarkGray'
 }
 
-function Invoke-ComposeUp {
-    <# Arranca el stack en un job con tope de tiempo: "docker compose up" puede
-       quedarse esperando indefinidamente si una dependencia nunca queda healthy
-       (p.ej. un script SQL de db/ que truena en el primer arranque). Devuelve
-       el exit code de compose, o -1 si se superó el tope.
-       No se recibe output en el loop (Receive-Job bloquea hasta el próximo
-       fragmento y anularía el tope): solo heartbeats; el detalle se imprime
-       únicamente si falla. #>
-    Say 'Levantando MovieWeb (build + contenedores)...' 'Cyan'
-    Say 'Primera vez: puede tardar 5-10 minutos mientras descarga imágenes.' 'DarkGray'
-    $job = Start-Job -ArgumentList $root -ScriptBlock {
-        param($dir)
-        Set-Location $dir
-        docker compose up --build -d 2>&1 | ForEach-Object { "$_" }
-        "===EXITCODE=$LASTEXITCODE==="
-    }
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $timedOut = $false
-    while (-not (Wait-Job $job -Timeout 20)) {
-        if ($sw.Elapsed.TotalSeconds -gt 720) { $timedOut = $true; break }
-        $txt = '  ...arrancando ({0}m {1:d2}s). No cierres esta ventana.' -f [int]$sw.Elapsed.TotalMinutes, $sw.Elapsed.Seconds
-        Say $txt 'DarkGray'
-    }
-    if ($timedOut) { Stop-Job $job -ErrorAction SilentlyContinue }
-    $lines = Receive-Job $job
-    Remove-Job $job -Force -ErrorAction SilentlyContinue
-    $raw = ($lines | Out-String)
-    $exit = -2
-    if ($raw -match '===EXITCODE=(-?\d+)==') { $exit = [int]$Matches[1] }
-    if ($exit -ne 0) { Write-Host $raw }
-    if ($timedOut) { return -1 }
-    return $exit
-}
-
-function Wait-Ready([int]$timeoutSec = 420) {
-    # Devuelve: 'ready' | 'crashed' | 'timeout'
-    Say ''
-    Say 'Esperando a que todo responda (la primera vez puede tardar varios minutos)...' 'Cyan'
-    $deadline = (Get-Date).AddSeconds($timeoutSec)
-    $started = Get-Date
-    $apiOk = $false
-    $webOk = $false
-    while ((Get-Date) -lt $deadline) {
-        if (-not $apiOk) {
-            try {
-                $r = Invoke-WebRequest -Uri 'http://localhost:3500/api/health' -UseBasicParsing -TimeoutSec 3
-                if ($r.StatusCode -eq 200) {
-                    $apiOk = $true
-                    Say '  [ok] API      -> http://localhost:3500' 'Green'
-                }
-            } catch { }
+function Ensure-EnvFile {
+    $envPath = Join-Path $root 'api\.env'
+    $examplePath = Join-Path $root 'api\.env.example'
+    if (-not (Test-Path $envPath)) {
+        if (-not (Test-Path $examplePath)) {
+            Fail 'Faltan api/.env y api/.env.example: no hay cómo configurar la API.' 'Pedile al que subió el repo que incluya api/.env.example.'
         }
-        if ($apiOk -and -not $webOk) {
-            try {
-                $r = Invoke-WebRequest -Uri 'http://localhost:4200/' -UseBasicParsing -TimeoutSec 5
-                if ($r.StatusCode -eq 200) {
-                    $webOk = $true
-                    Say '  [ok] Frontend -> http://localhost:4200' 'Green'
-                }
-            } catch { }
-        }
-        if ($apiOk -and $webOk) { return 'ready' }
-        # Detección de contenedores caídos (pasada una gracia de 20s para no
-        # confundir con el arranque normal "Created/Starting")
-        if (((Get-Date) - $started).TotalSeconds -gt 20) {
-            $all = & docker compose ps -a --format '{{.Service}}|{{.Status}}'
-            foreach ($line in @($all)) {
-                if ("$line" -match '\|(Exited|Restarting|Dead)') { return 'crashed' }
-            }
-        }
-        Start-Sleep -Seconds 3
-        Write-Host '.' -NoNewline -ForegroundColor DarkGray
+        Copy-Item -LiteralPath $examplePath -Destination $envPath -ErrorAction Stop
+        Say '  Se creó api/.env a partir de api/.env.example' 'DarkGray'
     }
-    Write-Host ''
-    return 'timeout'
+    $envText = Get-Content -LiteralPath $envPath -Raw -ErrorAction SilentlyContinue
+    if ($envText -notmatch '(?m)^\s*TMDB_API_KEY\s*=\s*\S') {
+        Say '  AVISO: TMDB_API_KEY está vacía en api/.env: no se verán posters, fotos ni trailers.' 'Yellow'
+        Say '  (Key gratis en https://www.themoviedb.org/settings/api)' 'Yellow'
+    }
 }
 
-function Show-Diagnostics {
-    Write-Host ''
-    Say '--- Estado de los contenedores ---' 'Yellow'
-    & docker compose ps -a
-    Write-Host ''
-    Say '--- Últimos logs (api y web) ---' 'Yellow'
-    & docker compose logs --tail=40 api web
-    Write-Host ''
-    Say 'Pistas:' 'Yellow'
-    Say '  1) Leé los logs de arriba: el primer "error" casi siempre lo explica todo.'
-    Say '  2) Reinicio limpio: DETENER.cmd y después INICIAR.cmd.'
-    Say '  3) Si el error aparece en una tuya, deshacé el cambio: git checkout -- <archivo>'
-    Say '  4) Si nada funciona, sacale una foto a esta pantalla y pegala en el grupo.'
+function Test-Databases {
+    # Las bases son nativas: solo avisamos si no responden (no las levantamos nosotros).
+    $map = Get-EnvMap
+    $pgHost = if ($map['DB_HOST']) { $map['DB_HOST'] } else { 'localhost' }
+    $pgPort = if ($map['DB_PORT']) { [int]$map['DB_PORT'] } else { 5432 }
+    if (Test-PortInUse $pgPort) {
+        Say ("  [ok] PostgreSQL -> {0}:{1}" -f $pgHost, $pgPort) 'Green'
+    } else {
+        Say ("  AVISO: PostgreSQL no responde en {0}:{1}." -f $pgHost, $pgPort) 'Yellow'
+        Say '  Arrancá el servicio de PostgreSQL (o revisá api/.env) antes de usar la API.' 'Yellow'
+    }
+    if (Test-PortInUse 27017) {
+        Say '  [ok] MongoDB -> localhost:27017' 'Green'
+    } else {
+        Say '  AVISO: MongoDB no responde en localhost:27017.' 'Yellow'
+        Say '  Arrancá el servicio de MongoDB antes de usar el timeline.' 'Yellow'
+    }
 }
-
-function Show-Success {
-    Write-Host ''
-    Say '==========================================' 'Green'
-    Say '   TODO LISTO - MovieWeb está arriba' 'Green'
-    Say '==========================================' 'Green'
-    Say '  App:     http://localhost:4200' 'White'
-    Say '  API:     http://localhost:3500/api/health' 'White'
-    Write-Host ''
-    Say '  Detener (guarda los datos):  DETENER.cmd' 'Gray'
-    Say '  Borrar y recrear la base:    RESET_BD.cmd' 'Gray'
-    Say '  Logs en vivo:                docker compose logs -f' 'Gray'
-    Write-Host ''
-}
-
-# ─── Acciones ───────────────────────────────────────────────────────────────
 
 function Invoke-Start {
-    Assert-Docker
+    Assert-Node
     Ensure-EnvFile
+    Test-Databases
 
-    $running = Get-RunningServices
-    Assert-PortsFree $running
-
-    $upExit = Invoke-ComposeUp
-    if ($upExit -eq -1) {
-        Show-Diagnostics
-        Fail 'El arranque se colgó esperando más de 12 minutos.' @'
-Causas típicas:
-  - Internet lento: la imagen no terminó de bajar. Volvé a ejecutar, continúa donde estaba.
-  - Alguna base no queda "sana": mirá "docker compose logs postgres" o "docker compose logs mongo".
-'@
-    }
-    if ($upExit -ne 0) {
-        Show-Diagnostics
-        Fail 'docker compose up terminó con errores (mirá el bloque de arriba).' `
-            'Los motivos más comunes: un puerto ocupado o una imagen que no se pudo construir.'
+    if (-not (Test-Path (Join-Path $root 'node_modules'))) {
+        Say ''
+        Say 'Instalando dependencias (npm install)...' 'Cyan'
+        & npm install
+        if ($LASTEXITCODE -ne 0) { Fail 'Falló npm install.' 'Revisá el error de arriba (¿tenés internet?).' }
     }
 
-    $state = Wait-Ready
-    if ($state -eq 'ready') {
-        Show-Success
-        exit 0
-    }
-    Show-Diagnostics
-    if ($state -eq 'crashed') {
-        Fail 'Un contenedor se cortó apenas arrancó (aparece como Exited o Restarting arriba).' `
-            'Si es postgres en la primera ejecución, el error está en un script SQL de db/: mirá "docker compose logs postgres".'
-    }
-    Fail 'El stack no terminó de responder dentro del tiempo esperado (7 minutos).' `
-        'Los logs de arriba muestran qué quedó trabado.'
+    Say ''
+    Say '==========================================' 'Green'
+    Say '   MovieWeb - levantando con Turborepo' 'Green'
+    Say '==========================================' 'Green'
+    Say '  App:  http://localhost:4200' 'White'
+    Say '  API:  http://localhost:3500/api/health' 'White'
+    Say '  Para detener: Ctrl+C en esta ventana (o DETENER.cmd).' 'DarkGray'
+    Say ''
+    & npm run dev
 }
 
 function Invoke-Stop {
-    Assert-Docker
-    Write-Host ''
-    Say 'Deteniendo los contenedores de MovieWeb...' 'Cyan'
-    & docker compose down
-    if ($LASTEXITCODE -ne 0) {
-        Fail 'No pude detener los contenedores.' 'Mirá el error de arriba.'
+    $ports = @(3500, 4200)
+    $stopped = 0
+    foreach ($p in $ports) {
+        $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
+        foreach ($c in @($conns)) {
+            $procId = $c.OwningProcess
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+            if ($proc) {
+                Say ("  Deteniendo {0} (PID {1}) en el puerto {2}" -f $proc.ProcessName, $procId, $p) 'Cyan'
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                $stopped++
+            }
+        }
     }
-    Say 'Listo. Los datos de la base quedaron guardados (para borrar todo está RESET_BD.cmd).' 'Green'
+    if ($stopped -eq 0) {
+        Say 'No había nada escuchando en 3500/4200.' 'Yellow'
+    } else {
+        Say 'Listo: desarrollo detenido.' 'Green'
+    }
     exit 0
 }
 
 function Invoke-Reset {
-    Assert-Docker
+    if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
+        Fail 'No encontré "psql" en el PATH.' 'Agregá la carpeta bin de PostgreSQL al PATH (o usá pgAdmin) y volvé a ejecutar.'
+    }
     Write-Host ''
-    Write-Host '  ATENCIÓN: esto BORRA todas las bases de datos locales' -ForegroundColor Red
-    Write-Host '  (películas cargadas, usuarios, ratings, timeline... todo).' -ForegroundColor Red
+    Write-Host '  ATENCIÓN: esto BORRA y recrea el esquema de PostgreSQL (películas, usuarios, ratings...).' -ForegroundColor Red
+    Write-Host '  La base de MongoDB NO se toca.' -ForegroundColor Red
     Write-Host ''
     $answer = Read-Host 'Escribí SI para confirmar, o cualquier otra cosa para cancelar'
     if ($answer -ne 'SI') {
         Say 'Cancelado: no se tocó nada.' 'Yellow'
         exit 0
     }
-    Say 'Borrando volúmenes y recreando desde cero...' 'Cyan'
-    & docker compose down -v
-    if ($LASTEXITCODE -ne 0) {
-        Fail 'No pude borrar los volúmenes.' 'Mirá el error de arriba.'
+
+    $map = Get-EnvMap
+    $dbUser = if ($map['DB_USER']) { $map['DB_USER'] } else { 'postgres' }
+    $dbHost = if ($map['DB_HOST']) { $map['DB_HOST'] } else { 'localhost' }
+    $dbPort = if ($map['DB_PORT']) { $map['DB_PORT'] } else { '5432' }
+    $dbName = if ($map['DB_DATABASE']) { $map['DB_DATABASE'] } else { 'movies' }
+    if ($map['DB_PASSWORD']) { $env:PGPASSWORD = $map['DB_PASSWORD'] }
+
+    $dbDir = Join-Path $root 'db'
+    Push-Location $dbDir
+    try {
+        Say 'Cargando 00_load_all.sql (esquema + datos)...' 'Cyan'
+        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '00_load_all.sql'
+        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 00_load_all.sql.' 'Revisá las credenciales en api/.env, que el servidor PostgreSQL esté arriba y que la base "movies" exista.' }
+        Say 'Cargando 13_users.sql...' 'Cyan'
+        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '13_users.sql'
+        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 13_users.sql.' 'Mirá el error de arriba.' }
+    } finally {
+        Pop-Location
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     }
-    Invoke-Start   # vuelve a levantar todo + recarga los scripts de db/
+    Say 'Base PostgreSQL "movies" recreada.' 'Green'
 }
 
 switch ($Action) {

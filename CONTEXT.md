@@ -14,7 +14,7 @@ Academic project for a Databases course. A web app called **MovieWeb** that lets
 | Relational DB | PostgreSQL (schema `movies`) via `pg` driver (no ORM) |
 | NoSQL DB | MongoDB via Mongoose |
 | External API | TMDB — images, trailers, backdrops, person photos |
-| Dev environment | Docker Compose (Postgres + Mongo) — not shipped |
+| Dev environment | npm workspaces + Turborepo (bases nativas: PostgreSQL + MongoDB) |
 
 ## TMDB Integration
 
@@ -198,7 +198,8 @@ movieweb_2026/
 │           └── components/  # Reusable UI components (cards, badges, etc.)
 ├── db/                      # SQL scripts (existing, do not modify)
 │   └── instrucciones.txt    # How to seed the DB
-├── docker-compose.yml       # Dev only: Postgres + Mongo
+├── package.json             # npm workspace root (workspaces: api, web)
+├── turbo.json               # Turborepo pipeline (dev / build / test)
 └── CONTEXT.md               # This file
 ```
 
@@ -346,17 +347,16 @@ CORS_ORIGIN=http://localhost:4200
 ## Running Locally
 
 ```bash
-# 1. Start DBs
-docker-compose up -d
+# 0. Prerrequisitos: Node 20+, PostgreSQL y MongoDB nativos corriendo
 
-# 2. Seed PostgreSQL
+# 1. Instalar dependencias del monorepo (api + web) y turbo
+npm install
+
+# 2. Seed de PostgreSQL (solo la primera vez)
 psql --single-transaction -d movies -U postgres -f db/00_load_all.sql
 
-# 3. Start backend
-cd api && npm install && npm run dev
-
-# 4. Start frontend
-cd web && npm install && ng serve
+# 3. Levantar API (3500) + frontend (4200) juntos con Turborepo
+npm run dev
 ```
 
 ## Notes for the LLM
