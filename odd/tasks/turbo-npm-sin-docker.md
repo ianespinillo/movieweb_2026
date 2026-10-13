@@ -53,8 +53,8 @@ instalaciones **nativas de Windows** (sus puertos por defecto: 5432 y 27017).
 
 1. `npm install` en la raíz instala `api` + `web` (workspaces) y `turbo`.
 2. `npm run dev` levanta `api` (3500) y `web` (4200) vía Turbo.
-3. `npm run build` construye `api` y `web`. ⚠️ `web` compila; `api` **no** por un error
-   de TypeScript **preexistente** (ver Evidencia de verificación).
+3. `npm run build` construye `api` y `web`. Verificado 2/2 (el error TS previo se
+   corrigió en `234f23a`, ver Evidencia).
 4. No queda **ninguna** referencia a Docker (ni archivos ni docs).
 5. `npx turbo run build --dry` resuelve el grafo sin errores.
 
@@ -102,16 +102,20 @@ Ejecutado el 2026-10-13 (Windows, PowerShell 7 shell / PS 5.1 para `.cmd`).
 - `git grep -i docker` sobre `*.md/*.json/*.yml/*.ps1/*.cmd` (excluyendo el doc histórico
   `odd/tasks/entorno-a-prueba-de-boludos.md`) → **0 resultados**.
 
-**Rojo (preexistente, ajeno a esta migración):**
+**Era rojo — resuelto (error TS preexistente):**
 
-- `npm run build` (completo, vía Turbo) → **falla en `movieweb-api`**:
+- `npm run build` fallaba en `movieweb-api` con
   `src/middleware/authenticate.ts(18,21): error TS2352: Conversion of type
   'string | JwtPayload' to type 'AuthPayload'`.
   - Origen: commit inicial `176ba78` — código **no tocado** por esta feature.
   - Por qué apareció ahora: Docker levantaba la API con `tsx watch` (dev), nunca corría
-    `tsc`; el nuevo `turbo run build` sí lo ejecuta y expone el error.
-  - Fix sugerido (1 línea, **pendiente de autorización** por estar fuera de alcance):
-    en `authenticate.ts:18` → `jwt.verify(token, JWT_SECRET) as unknown as AuthPayload`.
+    `tsc`; el nuevo `turbo run build` sí lo ejecuta y expuso el error.
+  - Fix aplicado (`234f23a`): puente `as unknown as AuthPayload` + comentario explicativo.
+    **Sin cambio de comportamiento en runtime**: `routes/auth.ts` firma `sub` como
+    `number` (el que miente es el tipo `JwtPayload` de la librería, que declara
+    `sub?: string`).
+  - Verificación posterior: `npm run build` → **2/2 exitosas**, y en la corrida siguiente
+    **FULL TURBO** (2 cached).
 
 **No verificado a propósito:**
 
@@ -123,7 +127,17 @@ Ejecutado el 2026-10-13 (Windows, PowerShell 7 shell / PS 5.1 para `.cmd`).
 - `INICIAR.cmd` / `DETENER.cmd` end-to-end: wrappers sin cambios que llaman a `dev.ps1`
   (ya validado por parseo).
 
-**Pendiente de decisión del humano:**
+**Cierre (2026-10-13):**
 
-- Confirmar/modificar el fix del error TS de `api` (criterio 3).
-- Commit de la migración (los cambios están sin commitear sobre la rama `feat/entorno-apb`).
+- `1e1fd17` — `chore: replace Docker with npm workspaces and Turborepo` (16 archivos,
+  +9611/−437): workspace root, `turbo.json`, `web` dev script, `dev.ps1` sin Docker,
+  `.gitignore`, docs, y borrado de compose + Dockerfiles + `docker/init-db.sh`.
+- `234f23a` — `fix(api): drop unsafe JWT payload assertion in authenticate`.
+- Ambos se commitearon sobre `feat/entorno-apb`; luego **fast-forward a `main`**
+  (`main = 234f23a`) y la rama fue **borrada** (ya fusionada, sin pérdida).
+  `main` queda **5 commits adelante de `origin/main`** y **sin pushear** (decisión del humano).
+- `scripts/dev.ps1` conserva el **BOM (`EF BB BF`)** tras el checkout; parse AST sin errores.
+- Único pendiente real: `npm run dev` end-to-end y `dev.ps1 -Action reset` — requieren
+  MongoDB nativo escuchando en `27017` y un re-seed destructivo respectivamente.
+- `AGENTS.md` fue **generado por Turbo** (bloque agent-guidance) y se commiteó; se puede
+  desactivar con `"agentGuidance": false` en `turbo.json`.
