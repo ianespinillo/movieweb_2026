@@ -15,7 +15,10 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const token = header.slice(7);
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    // The token is signed with `{ sub: number, username: string }` (see routes/auth.ts),
+    // but jsonwebtoken types `JwtPayload.sub` as `string | undefined`, so the assertion
+    // needs the `unknown` bridge. Only widened here: the signing side owns the shape.
+    const payload = jwt.verify(token, JWT_SECRET) as unknown as AuthPayload;
     (req as AuthRequest).user = payload;
     next();
   } catch {
