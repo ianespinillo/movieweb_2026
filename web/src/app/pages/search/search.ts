@@ -1,4 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { Movie } from '../../models/movie.model';
+import { Person } from '../../models/person.model';
+import { Movie as MovieService } from '../../services/movie';
+
 
 @Component({
   imports: [],
@@ -7,23 +11,31 @@ import { Component, signal } from '@angular/core';
   templateUrl: './search.html',
 })
 export class Search {
+  private movieService = inject(MovieService);
+
   searchQuery = signal('');
   submittedQuery = signal('');
-  movies = [];
-  actors = [
-    { id: 1, name: 'Leonardo DiCaprio' },
-    { id: 2, name: 'Kate Winslet' }
-  ];
 
-  directors = [
-    { id: 3, name: 'James Cameron' },
-    { id: 4, name: 'Christopher Nolan' }
-  ];
+  movies: Movie[] = [];
+  actors: Person[] = [];
+  directors: Person[] = [];
 
   search() {
-    if (this.searchQuery().trim() !== '') {
-      this.submittedQuery.set(this.searchQuery().trim());
-      console.log('Buscando:', this.searchQuery().trim());
+    const query = this.searchQuery().trim();
+
+    if (query === '') {
+      return;
     }
+
+    this.submittedQuery.set(query);
+
+    this.movieService.searchMovies(query).subscribe({
+      next: (response) => {
+        console.log('Respuesta del backend:', response);
+      },
+      error: (error) => {
+        console.error('Error al buscar películas:', error);
+      }
+    });
   }
 }
