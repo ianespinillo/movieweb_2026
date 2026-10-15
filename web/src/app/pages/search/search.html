@@ -1,48 +1,99 @@
-<h1>Buscar en MovieWeb</h1>
+<main class="search-page">
+    <header class="search-header">
+        <h1>Buscar en MovieWeb</h1>
+        <p>Encontrá películas, actores y directores.</p>
+    </header>
 
-<p>Encontrá películas, actores y directores.</p>
+    <div class="search-form">
+        <input type="search" placeholder="Buscar película o persona" aria-label="Buscar película o persona"
+            [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" (keyup.enter)="search()" />
 
-<input type="text" placeholder="Buscar película o persona" [value]="searchQuery()"
-    (input)="searchQuery.set($any($event.target).value)" />
+        <button type="button" (click)="search()" [disabled]="isLoading()">
+            Buscar
+        </button>
+    </div>
 
-<button (click)="search()">Buscar</button>
+    @if (hasSearched()) {
+    <div class="search-results">
+        <p class="search-summary">
+            Resultados de búsqueda para:
+            <strong>{{ submittedQuery() }}</strong>
+        </p>
 
-@if (submittedQuery()) {
-<p>Resultados de búsqueda para: {{ submittedQuery() }}</p>
+        @if (isLoading()) {
+        <p class="status-message">Buscando resultados...</p>
+        } @else {
 
-<section>
-    <h2>Películas</h2>
+        <section class="result-section">
+            <h2>Películas</h2>
 
-    @if (movies.length === 0) {
-    <p>No se encontraron películas.</p>
-    } @else {
-    @for (movie of movies; track movie.id) {
-    <p>{{ movie.title }}</p>
+            @if (moviesError()) {
+            <p class="error-message">
+                No se pudieron cargar las películas.
+            </p>
+            } @else if (movies.length === 0) {
+            <p class="empty-message">
+                No se encontraron películas.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (movie of movies; track movie.id) {
+                <article class="result-card">
+                    <h3>{{ movie.title }}</h3>
+                    <p>Película</p>
+                </article>
+                }
+            </div>
+            }
+        </section>
+
+        <section class="result-section">
+            <h2>Actores</h2>
+
+            @if (peopleError()) {
+            <p class="error-message">
+                No se pudieron cargar los actores.
+            </p>
+            } @else if (actors.length === 0) {
+            <p class="empty-message">
+                No se encontraron actores.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (actor of actors; track actor.id) {
+                <article class="result-card">
+                    <h3>{{ actor.name }}</h3>
+                    <p>Actor</p>
+                </article>
+                }
+            </div>
+            }
+        </section>
+
+        <section class="result-section">
+            <h2>Directores</h2>
+
+            @if (peopleError()) {
+            <p class="error-message">
+                No se pudieron cargar los directores.
+            </p>
+            } @else if (directors.length === 0) {
+            <p class="empty-message">
+                No se encontraron directores.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (director of directors; track director.id) {
+                <article class="result-card">
+                    <h3>{{ director.name }}</h3>
+                    <p>Director</p>
+                </article>
+                }
+            </div>
+            }
+        </section>
+
+        }
+    </div>
     }
-    }
-</section>
-
-<section>
-    <h2>Actores</h2>
-
-    @if (actors.length === 0) {
-    <p>No se encontraron actores.</p>
-    } @else {
-    @for (actor of actors; track actor.id) {
-    <p>{{ actor.name }}</p>
-    }
-    }
-</section>
-
-<section>
-    <h2>Directores</h2>
-
-    @if (directors.length === 0) {
-    <p>No se encontraron directores.</p>
-    } @else {
-    @for (director of directors; track director.id) {
-    <p>{{ director.name }}</p>
-    }
-    }
-</section>
-}
+</main>

@@ -1,41 +1,97 @@
 import { Component, inject, signal } from '@angular/core';
-import { Movie } from '../../models/movie.model';
-import { Person } from '../../models/person.model';
-import { Movie as MovieService } from '../../services/movie';
+import { forkJoin, of, catchError, finalize, map, switchMap } from 'rxjs';
 
+import { Movie } from '../../models/movie.model';
+import { Person, PeopleSearchResponse } from '../../models/person.model';
+import { Movie as MovieService } from '../../services/movie';
+import { PersonService } from '../../services/person';
 
 @Component({
-  imports: [],
   selector: 'app-search',
-  styleUrl: './search.css',
+  imports: [],
   templateUrl: './search.html',
+  styleUrl: './search.css',
 })
 export class Search {
   private movieService = inject(MovieService);
+  private personService = inject(PersonService);
 
   searchQuery = signal('');
   submittedQuery = signal('');
+  hasSearched = signal(false);
+  isLoading = signal(false);
+
+  moviesError = signal(false);
+  peopleError = signal(false);
 
   movies: Movie[] = [];
   actors: Person[] = [];
   directors: Person[] = [];
 
-  search() {
+  private searchVersion = 0;
+
+  search(): void {
     const query = this.searchQuery().trim();
 
-    if (query === '') {
+    if (!query) {
       return;
     }
 
-    this.submittedQuery.set(query);
+    const currentVersion = ++this.searchVersion;
 
-    this.movieService.searchMovies(query).subscribe({
-      next: (response) => {
-        console.log('Respuesta del backend:', response);
+    this.submittedQuery.set(query);
+    this.hasSearched.set(true);
+    this.isLoading.set(true);
+
+    this.moviesError.set(false);
+    this.peopleError.set(false);
+
+    this.movies = [];
+    this.actors = [];
+    this.directors = [];
+
+    forkJoin({
+      movies: this.movieService.searchMovies(query).pipe(
+        map(data => ({ data, failed: false })),
+        catchError(error => {
+          console.error('Error buscando películas:', error);
+
+          return of({
+            data: [] as Movie[],
+            failed: true,
+          });
+        })
+      ),
+
+      people: this.personService.searchPeople(query).pipe(
+        map(data => ({ data, failed: false })),
+        catchError(error => {
+          console.error('Error buscando personas:', error);
+
+          return of({
+            data: {
+              actors: [],
+              directors: [],
+            } as PeopleSearchResponse,
+            failed: true,
+          });
+        })
+      ),
+    }).subscribe({
+      next: ({ movies, people }) => {
+        if (currentVersion !== this.searchVersion) {
+          return;
+        }
+
+        this.movies = movies.data;
+        this.actors = people.data.actors;
+        this.directors = people.data.directors;
+
+        this.moviesError.set(movies.failed);
+        this.peopleError.set(people.failed);
+
+        this.isLoading.set(false);
       },
-      error: (error) => {
-        console.error('Error al buscar películas:', error);
-      }
     });
   }
 }
