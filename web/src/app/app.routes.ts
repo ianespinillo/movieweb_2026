@@ -11,4 +11,16 @@ export const routes: Routes = [
     path: 'search',
     component: Search,
   },
+  {
+    path: 'movies/:id',
+    loadComponent: () =>
+      import('./pages/movie-detail/movie-detail')
+        .then(m => m.MovieDetail),
+  },
+  {
+    path: 'people/:id',
+    loadComponent: () =>
+      import('./pages/person-detail/person-detail')
+        .then(m => m.PersonDetail),
+  },
 ];

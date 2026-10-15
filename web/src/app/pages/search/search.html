@@ -8,7 +8,7 @@
         <input type="search" placeholder="Buscar película o persona" aria-label="Buscar película o persona"
             [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" (keyup.enter)="search()" />
 
-        <button type="button" (click)="search()" [disabled]="isLoading()">
+        <button type="button" (click)="search()">
             Buscar
         </button>
     </div>
@@ -38,10 +38,10 @@
             } @else {
             <div class="result-grid">
                 @for (movie of movies; track movie.id) {
-                <article class="result-card">
+                <a class="result-card" [routerLink]="['/movies', movie.id]">
                     <h3>{{ movie.title }}</h3>
                     <p>Película</p>
-                </article>
+                </a>
                 }
             </div>
             }
@@ -61,10 +61,10 @@
             } @else {
             <div class="result-grid">
                 @for (actor of actors; track actor.id) {
-                <article class="result-card">
+                <a class="result-card" [routerLink]="['/people', actor.id]">
                     <h3>{{ actor.name }}</h3>
                     <p>Actor</p>
-                </article>
+                </a>
                 }
             </div>
             }
@@ -84,10 +84,10 @@
             } @else {
             <div class="result-grid">
                 @for (director of directors; track director.id) {
-                <article class="result-card">
+                <a class="result-card" [routerLink]="['/people', director.id]">
                     <h3>{{ director.name }}</h3>
                     <p>Director</p>
-                </article>
+                </a>
                 }
             </div>
             }

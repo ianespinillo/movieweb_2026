@@ -110,3 +110,20 @@
         width: 100%;
     }
 }
+
+.result-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.result-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.result-card:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
