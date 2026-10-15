@@ -1,0 +1,48 @@
+<h1>Buscar en MovieWeb</h1>
+
+<p>Encontrá películas, actores y directores.</p>
+
+<input type="text" placeholder="Buscar película o persona" [value]="searchQuery()"
+    (input)="searchQuery.set($any($event.target).value)" />
+
+<button (click)="search()">Buscar</button>
+
+@if (submittedQuery()) {
+<p>Resultados de búsqueda para: {{ submittedQuery() }}</p>
+
+<section>
+    <h2>Películas</h2>
+
+    @if (movies.length === 0) {
+    <p>No se encontraron películas.</p>
+    } @else {
+    @for (movie of movies; track movie.id) {
+    <p>{{ movie.title }}</p>
+    }
+    }
+</section>
+
+<section>
+    <h2>Actores</h2>
+
+    @if (actors.length === 0) {
+    <p>No se encontraron actores.</p>
+    } @else {
+    @for (actor of actors; track actor.id) {
+    <p>{{ actor.name }}</p>
+    }
+    }
+</section>
+
+<section>
+    <h2>Directores</h2>
+
+    @if (directors.length === 0) {
+    <p>No se encontraron directores.</p>
+    } @else {
+    @for (director of directors; track director.id) {
+    <p>{{ director.name }}</p>
+    }
+    }
+</section>
+}
