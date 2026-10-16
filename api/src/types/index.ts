@@ -58,6 +58,7 @@ export interface CastRow {
   person_name: string;
   character_name: string;
   cast_order: number;
+  gender: string | null;  // 'Female' | 'Male' | 'Unspecified'
 }
 
 export interface CrewRow {
@@ -80,6 +81,7 @@ export interface CountryRow {
 export interface LanguageRow {
   language_iso: string;
   language_name: string;
+  language_role: string | null;  // 'Original' | 'Spoken'
 }
 
 export interface CompanyRow {
@@ -92,8 +94,8 @@ export interface KeywordRow {
   keyword_name: string;
 }
 
-export interface MovieDetailResult {
-  movie: MovieRow;
+// Shape of GET /api/movies/:id — the movie columns at the top level plus its relations.
+export interface MovieDetailResult extends MovieRow {
   directors: CrewRow[];
   writers: CrewRow[];
   cast: CastRow[];
@@ -103,6 +105,16 @@ export interface MovieDetailResult {
   languages: LanguageRow[];
   companies: CompanyRow[];
   keywords: KeywordRow[];
+}
+
+// Row of GET /api/movies/search and GET /api/keywords/search
+export type MovieSearchRow = Pick<
+  MovieRow,
+  'movie_id' | 'title' | 'release_date' | 'overview' | 'vote_average' | 'vote_count'
+>;
+
+export interface KeywordMovieRow extends MovieSearchRow {
+  matched_keywords: string[];  // the movie's keywords that matched the search term
 }
 
 export interface MovieUserRow {
