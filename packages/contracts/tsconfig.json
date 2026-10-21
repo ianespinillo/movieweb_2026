@@ -1,0 +1,14 @@
+{
+  // Type-check only: the package is just declarations (.d.ts), nothing is emitted.
+  // skipLibCheck is false so mistakes in these .d.ts files are caught here
+  // (api and web use skipLibCheck: true and would never check them).
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": false
+  },
+  "include": ["src"]
+}
