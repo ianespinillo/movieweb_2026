@@ -9,8 +9,8 @@ import tmdbRouter from './routes/tmdb.js';
 import moviesRouter   from './routes/movies.js';
 import keywordsRouter from './routes/keywords.js';
 import peopleRouter   from './routes/people.js';
+import usersRouter    from './routes/users.js';
 // Uncomment as each route file is implemented:
-// import usersRouter    from './routes/users.js';
 // import activityRouter from './routes/activity.js';
 
 const app = express();
@@ -27,7 +27,7 @@ app.use('/api/keywords', keywordsRouter);
 app.use('/api/people',   peopleRouter);
 
 // Protected routes (authenticate middleware applied inside each router)
-// app.use('/api/users',    usersRouter);
+app.use('/api/users',    usersRouter);
 // app.use('/api/activity', activityRouter);
 
 app.get('/api/health', (_req, res) => ok(res, { status: 'ok' }));
