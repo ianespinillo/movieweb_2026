@@ -12,6 +12,11 @@ Una guía por integrante. Cada archivo es autocontenido: pegarlo junto con `CONT
 
 > **Variables de entorno nuevas:** agregar `JWT_SECRET=una-cadena-secreta-larga` en `api/.env`.
 
+> **⚠️ Formato de respuestas:** los ejemplos de las guías son anteriores al contrato común. Ahora toda la API
+> responde `{ success, data, timestamp }` (o un `ErrorResponse`), los tipos se importan de
+> `@movieweb/contracts` y las URLs salen de `web/src/app/services/api-routes.ts`. Ante cualquier
+> diferencia, manda la sección **API Response Contract** de `CONTEXT.md`.
+
 
 ## Flujo de trabajo (npm + Turborepo)
 
