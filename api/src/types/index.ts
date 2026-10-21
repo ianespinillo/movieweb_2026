@@ -1,5 +1,20 @@
 // ─── Express augmentation ────────────────────────────────────────────────────
 import { Request } from 'express';
+import type {
+  CastMember,
+  Company,
+  Country,
+  CrewMember,
+  Genre,
+  Keyword,
+  Language,
+  Movie,
+  MovieDetail,
+} from '@movieweb/contracts';
+
+// Everything the API sends to the frontend lives in packages/contracts.
+// Re-exported here so routes keep importing from '../types/index.js'.
+export type * from '@movieweb/contracts';
 
 export interface AuthPayload {
   sub: number;
@@ -13,6 +28,7 @@ export interface AuthRequest extends Request {
 }
 
 // ─── PostgreSQL row shapes ────────────────────────────────────────────────────
+// Rows that leave the API are aliases of the contract types, so both stay in sync.
 
 export interface UserRow {
   user_id: number;
@@ -22,21 +38,7 @@ export interface UserRow {
   password_hash: string;
 }
 
-export interface MovieRow {
-  movie_id: number;
-  title: string;
-  budget: number | null;
-  homepage: string | null;
-  overview: string | null;
-  popularity: number | null;
-  release_date: string | null;
-  revenue: number | null;
-  runtime: number | null;
-  movie_status: string | null;
-  tagline: string | null;
-  vote_average: number | null;
-  vote_count: number | null;
-}
+export type MovieRow = Movie;
 
 export interface PersonRow {
   person_id: number;
@@ -53,57 +55,15 @@ export interface PersonDetailRow extends PersonRow {
   as_director: MovieRow[];
 }
 
-export interface CastRow {
-  person_id: number;
-  person_name: string;
-  character_name: string;
-  cast_order: number;
-}
+export type CastRow     = CastMember;
+export type CrewRow     = CrewMember;
+export type GenreRow    = Genre;
+export type CountryRow  = Country;
+export type LanguageRow = Language;
+export type CompanyRow  = Company;
+export type KeywordRow  = Keyword;
 
-export interface CrewRow {
-  person_id: number;
-  person_name: string;
-  department_name: string;
-  job: string;
-}
-
-export interface GenreRow {
-  genre_id: number;
-  genre_name: string;
-}
-
-export interface CountryRow {
-  country_iso: string;
-  country_name: string;
-}
-
-export interface LanguageRow {
-  language_iso: string;
-  language_name: string;
-}
-
-export interface CompanyRow {
-  company_id: number;
-  company_name: string;
-}
-
-export interface KeywordRow {
-  keyword_id: number;
-  keyword_name: string;
-}
-
-export interface MovieDetailResult {
-  movie: MovieRow;
-  directors: CrewRow[];
-  writers: CrewRow[];
-  cast: CastRow[];
-  crew: CrewRow[];
-  genres: GenreRow[];
-  countries: CountryRow[];
-  languages: LanguageRow[];
-  companies: CompanyRow[];
-  keywords: KeywordRow[];
-}
+export type MovieDetailResult = MovieDetail;
 
 export interface MovieUserRow {
   user_id: number;
@@ -119,13 +79,7 @@ export interface MovieUserWithTitle extends MovieUserRow {
 }
 
 // ─── TMDB shapes ─────────────────────────────────────────────────────────────
-
-export interface TmdbMovieMeta {
-  id: number;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  tagline: string;
-}
+// TmdbMovieMeta, TmdbVideo and TmdbPersonMeta come from the contract.
 
 export interface TmdbVideoRaw {
   key: string;
@@ -133,20 +87,4 @@ export interface TmdbVideoRaw {
   type: string;
   official: boolean;
   name: string;
-}
-
-export interface TmdbVideo {
-  key: string;
-  site: string;
-  type: string;
-  official: boolean;
-  name: string;
-}
-
-export interface TmdbPersonMeta {
-  id: number;
-  profile_path: string | null;
-  biography: string;
-  birthday: string | null;
-  place_of_birth: string | null;
 }

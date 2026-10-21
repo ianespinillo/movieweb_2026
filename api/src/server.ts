@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { connectMongo } from './config/mongo.js';
+import { errorHandler, notFoundHandler } from './http/middleware.js';
+import { ok } from './http/response.js';
 import authRouter from './routes/auth.js';
 import tmdbRouter from './routes/tmdb.js';
 // Uncomment as each route file is implemented:
@@ -28,7 +30,11 @@ app.use('/api/tmdb', tmdbRouter);
 // app.use('/api/users',    usersRouter);
 // app.use('/api/activity', activityRouter);
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_req, res) => ok(res, { status: 'ok' }));
+
+// Must stay last: unknown /api routes → 404, then any error → ErrorResponse
+app.use('/api', notFoundHandler);
+app.use(errorHandler);
 
 async function bootstrap() {
   await connectMongo();
