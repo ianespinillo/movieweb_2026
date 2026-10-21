@@ -68,10 +68,13 @@ Get a free key at https://www.themoviedb.org/settings/api
 Calls our backend proxy. Image URLs are built client-side (CDN, no key):
 
 ```typescript
+import type { ApiResponse, TmdbMovieMeta, TmdbPersonMeta, TmdbVideo } from '@movieweb/contracts';
+import { TMDB_ROUTES } from './api-routes';
+import { unwrap } from './api-response';
+
 @Injectable({ providedIn: 'root' })
 export class TmdbService {
   private http = inject(HttpClient);
-  private base = 'http://localhost:3500/api/tmdb';
   readonly imageBase = 'https://image.tmdb.org/t/p';
 
   posterUrl(path: string | null, size = 'w342') {
@@ -85,13 +88,13 @@ export class TmdbService {
   }
 
   getMovieMeta(id: number | string): Observable<TmdbMovieMeta> {
-    return this.http.get<TmdbMovieMeta>(`${this.base}/movie/${id}`);
+    return this.http.get<ApiResponse<TmdbMovieMeta>>(TMDB_ROUTES.movie(id)).pipe(unwrap());
   }
   getVideos(id: number | string): Observable<TmdbVideo[]> {
-    return this.http.get<TmdbVideo[]>(`${this.base}/movie/${id}/videos`);
+    return this.http.get<ApiResponse<TmdbVideo[]>>(TMDB_ROUTES.videos(id)).pipe(unwrap());
   }
   getPersonMeta(id: number | string): Observable<TmdbPersonMeta> {
-    return this.http.get<TmdbPersonMeta>(`${this.base}/person/${id}`);
+    return this.http.get<ApiResponse<TmdbPersonMeta>>(TMDB_ROUTES.person(id)).pipe(unwrap());
   }
 }
 ```
@@ -138,42 +141,21 @@ export class SafeUrlPipe implements PipeTransform {
 
 ### TMDB TypeScript interfaces
 
-```typescript
-// web/src/app/core/models/tmdb.model.ts
-export interface TmdbMovieMeta {
-  id: number;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  tagline: string;
-}
-
-export interface TmdbVideo {
-  key: string;       // YouTube video ID
-  site: string;      // 'YouTube'
-  type: string;      // 'Trailer' | 'Teaser' | 'Clip'
-  official: boolean;
-}
-
-export interface TmdbPersonMeta {
-  id: number;
-  profile_path: string | null;
-  biography: string;
-  birthday: string;
-  place_of_birth: string;
-}
-```
-
-
+`TmdbMovieMeta`, `TmdbVideo` and `TmdbPersonMeta` live in `packages/contracts/src/tmdb.d.ts`.
+Import them from `@movieweb/contracts` — do not redeclare them in `web/`.
 
 ## Repository Structure
 
 ```
 movieweb_2026/
+├── packages/
+│   └── contracts/           # @movieweb/contracts — types shared by api and web (see below)
 ├── api/                     # Express REST API (backend)
 │   └── src/
 │       ├── config/
 │       │   ├── postgres.js  # pg Pool — connects to PG using env vars
 │       │   └── mongo.js     # Mongoose connect
+│       ├── http/            # ok(), HttpError, asyncHandler, errorHandler, pagination, parseId
 │       ├── routes/
 │       │   ├── movies.js    # /api/movies/*
 │       │   ├── people.js    # /api/people/*
@@ -183,6 +165,9 @@ movieweb_2026/
 │       └── server.js        # Express entry point, port 3500
 ├── web/                     # Angular 22 app
 │   └── src/app/
+│       ├── services/
+│       │   ├── api-routes.ts    # every API URL (MOVIE_ROUTES, TMDB_ROUTES, ...)
+│       │   └── api-response.ts  # unwrap() and apiErrorMessage()
 │       ├── core/
 │       │   ├── services/    # Angular services (HttpClient calls to /api/*)
 │       │   └── models/      # TypeScript interfaces
@@ -198,7 +183,7 @@ movieweb_2026/
 │           └── components/  # Reusable UI components (cards, badges, etc.)
 ├── db/                      # SQL scripts (existing, do not modify)
 │   └── instrucciones.txt    # How to seed the DB
-├── package.json             # npm workspace root (workspaces: api, web)
+├── package.json             # npm workspace root (workspaces: api, web, packages/*)
 ├── turbo.json               # Turborepo pipeline (dev / build / test)
 └── CONTEXT.md               # This file
 ```
@@ -227,8 +212,8 @@ Port of shadcn/ui for Angular. Uses TailwindCSS v4. Components installed via `np
 - `department` — department names (Directing, Writing, etc.)
 - `genre` / `movie_genres` — genres
 - `keyword` / `movie_keywords` — keywords
-- `production_country` / `movie_country` — countries
-- `language` / `movie_languages` — languages
+- `country` / `production_country` — countries (`country.country_iso_code`)
+- `language` / `movie_languages` / `language_role` — languages (`language.language_code`, role Original/Spoken)
 - `production_company` / `movie_company` — companies
 
 **New tables to create (migration in `db/`):**
@@ -263,13 +248,54 @@ Three event types, stored in a single `user_activity` collection:
 { "userId": "1", "type": "WROTE_REVIEW",        "timestamp": ISODate, "details": { "movieId": 123, "movieTitle": "...", "reviewId": "..." } }
 ```
 
+## API Response Contract (`packages/contracts`)
+
+Every endpoint answers with the same envelope. The types live in `@movieweb/contracts` and are
+imported by **both** `api/` and `web/`: if a field changes there, the side that was not updated
+stops compiling. Field names match the PostgreSQL columns (snake_case: `movie_id`, `person_name`).
+
+```typescript
+// success — any 2xx
+interface ApiResponse<T> { success: true; data: T; timestamp: string }
+
+// error — any 4xx/5xx
+interface ErrorResponse {
+  success: false; statusCode: number; timestamp: string; path: string; method: string;
+  message: string | string[]; error: string; details?: unknown;
+}
+
+// lists that can be long (searches) go paginated INSIDE data:
+// ApiResponse<PaginatedResponse<MovieSummary>>, query params ?page=1&limit=20 (max 100)
+interface PaginatedResponse<T> { items: T[]; total: number; page: number; limit: number; totalPages: number }
+```
+
+**Backend** (`api/src/http/`) — never build these JSON bodies by hand:
+
+```typescript
+router.get('/:id', asyncHandler(async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) throw badRequest('Invalid movie id');   // → ErrorResponse 400
+  const movie = await ...;
+  if (!movie) throw notFound('Movie not found');           // → ErrorResponse 404
+  ok(res, movie);                                          // → ApiResponse<Movie>
+}));
+```
+
+- Wrap every async route in `asyncHandler` (Express 4 does not catch async errors by itself).
+- Throw `HttpError` helpers (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`);
+  anything else becomes a 500. The central `errorHandler` in `server.ts` formats them.
+- Paginated routes: `readPagination(req)` → `{ page, limit, offset }`, then `ok(res, paginated(rows, total, p))`.
+
+**Frontend**: URLs come from `services/api-routes.ts`; `unwrap()` returns `data`; `apiErrorMessage(err)`
+gives the user-facing message of a failed request.
+
 ## API Endpoints Reference
 
 ### Movies (PostgreSQL)
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/movies/search?q=:term` | Search movies by title (ILIKE) |
-| GET | `/api/movies/:id` | Full movie detail: cast, crew, genres, countries, keywords, languages, companies |
+| GET | `/api/movies/search?q=:term&page=&limit=` | Search movies by title (ILIKE) → `PaginatedResponse<MovieSummary>` |
+| GET | `/api/movies/:id` | Full movie detail: cast, crew, genres, countries, keywords, languages, companies → `MovieDetail` |
 
 ### People (PostgreSQL)
 | Method | Path | Description |
@@ -280,7 +306,7 @@ Three event types, stored in a single `user_activity` collection:
 ### Keywords (PostgreSQL)
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/keywords/search?q=:term` | Movies linked to a keyword |
+| GET | `/api/keywords/search?q=:term&page=&limit=` | Movies linked to a keyword → `PaginatedResponse<KeywordMovie>` |
 
 ### Users (PostgreSQL)
 | Method | Path | Description |
@@ -312,20 +338,25 @@ Three event types, stored in a single `user_activity` collection:
 
 ## Angular Service Pattern
 
-All services inject `HttpClient` and call `http://localhost:3500/api/*`:
+Services take URLs from `services/api-routes.ts`, types from `@movieweb/contracts`, and `unwrap()` the envelope:
 
 ```typescript
+import type { ApiResponse, MovieDetail, MovieSummary, PaginatedResponse } from '@movieweb/contracts';
+import { MOVIE_ROUTES } from './api-routes';
+import { unwrap } from './api-response';
+
 @Injectable({ providedIn: 'root' })
 export class MovieService {
   private http = inject(HttpClient);
-  private base = 'http://localhost:3500/api/movies';
 
-  search(q: string): Observable<Movie[]> {
-    return this.http.get<Movie[]>(`${this.base}/search`, { params: { q } });
+  search(q: string, page = 1): Observable<PaginatedResponse<MovieSummary>> {
+    return this.http
+      .get<ApiResponse<PaginatedResponse<MovieSummary>>>(MOVIE_ROUTES.search, { params: { q, page } })
+      .pipe(unwrap());
   }
 
   getById(id: number): Observable<MovieDetail> {
-    return this.http.get<MovieDetail>(`${this.base}/${id}`);
+    return this.http.get<ApiResponse<MovieDetail>>(MOVIE_ROUTES.detail(id)).pipe(unwrap());
   }
 }
 ```
@@ -368,4 +399,6 @@ npm run dev
 - MongoDB connection must handle reconnection gracefully.
 - CORS must be configured in Express to allow `http://localhost:4200`.
 - All SQL queries must use parameterized inputs (`$1`, `$2`) — no string interpolation.
+- Every API response follows the contract in "API Response Contract": use `ok()` / `HttpError` / `asyncHandler` in the API and `unwrap()` in Angular. Never return raw `res.json(...)`.
+- Types that cross the API boundary go in `packages/contracts` (a `.d.ts` file) and are imported from `@movieweb/contracts` on both sides. Do not redeclare them in `web/` or `api/`.
 - TypeScript strict mode is ON in the Angular project.
