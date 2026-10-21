@@ -53,17 +53,15 @@ export type KeywordRow  = Keyword;
 
 export type MovieDetailResult = MovieDetail;
 
-export interface MovieUserRow {
+/** A row of user_movies. */
+export interface UserMovieRow {
   user_id: number;
   movie_id: number;
+  is_favorite: boolean;
+  watched: boolean;
   rating: number | null;
-  review: string | null;
-  added_at: string;
-}
-
-export interface MovieUserWithTitle extends MovieUserRow {
-  title: string;
-  release_date: string | null;
+  added_at: Date;
+  updated_at: Date;
 }
 
 // ─── TMDB shapes ─────────────────────────────────────────────────────────────
