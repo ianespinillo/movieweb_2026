@@ -1,10 +1,11 @@
+
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, forkJoin, of, catchError, map, switchMap, tap } from 'rxjs';
 
 import { Movie } from '../../models/movie.model';
-import { Person, PeopleSearchResponse } from '../../models/person.model';
+import { Person } from '../../models/person.model';
 import { Movie as MovieService } from '../../services/movie';
 import { PersonService } from '../../services/person';
 
@@ -66,10 +67,7 @@ export class Search {
             catchError(error => {
               console.error('Error buscando personas:', error);
               return of({
-                data: {
-                  actors: [],
-                  directors: [],
-                } as PeopleSearchResponse,
+                data: [] as Person[],
                 failed: true,
               });
             })
@@ -80,8 +78,9 @@ export class Search {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(({ movies, people }) => {
       this.movies = movies.data;
-      this.actors = people.data.actors;
-      this.directors = people.data.directors;
+
+      this.actors = people.data.filter(person => person.is_actor);
+      this.directors = people.data.filter(person => person.is_director);
 
       this.moviesError.set(movies.failed);
       this.peopleError.set(people.failed);

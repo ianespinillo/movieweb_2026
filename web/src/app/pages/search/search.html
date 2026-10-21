@@ -37,8 +37,8 @@
             </p>
             } @else {
             <div class="result-grid">
-                @for (movie of movies; track movie.id) {
-                <a class="result-card" [routerLink]="['/movies', movie.id]">
+                @for (movie of movies; track movie.movie_id) {
+                <a class="result-card" [routerLink]="['/movies', movie.movie_id]">
                     <h3>{{ movie.title }}</h3>
                     <p>Película</p>
                 </a>
@@ -60,9 +60,9 @@
             </p>
             } @else {
             <div class="result-grid">
-                @for (actor of actors; track actor.id) {
-                <a class="result-card" [routerLink]="['/people', actor.id]">
-                    <h3>{{ actor.name }}</h3>
+                @for (actor of actors; track actor.person_id) {
+                <a class="result-card" [routerLink]="['/people', actor.person_id]">
+                    <h3>{{ actor.person_name }}</h3>
                     <p>Actor</p>
                 </a>
                 }
@@ -83,9 +83,9 @@
             </p>
             } @else {
             <div class="result-grid">
-                @for (director of directors; track director.id) {
-                <a class="result-card" [routerLink]="['/people', director.id]">
-                    <h3>{{ director.name }}</h3>
+                @for (director of directors; track director.person_id) {
+                <a class="result-card" [routerLink]="['/people', director.person_id]">
+                    <h3>{{ director.person_name }}</h3>
                     <p>Director</p>
                 </a>
                 }
