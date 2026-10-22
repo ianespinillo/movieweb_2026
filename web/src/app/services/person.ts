@@ -5,15 +5,17 @@ import { map } from 'rxjs';
 
 import { Person } from '../models/person.model';
 
+export interface PeopleSearchPage {
+  items: Person[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface PeopleSearchResponse {
   success: true;
-  data: {
-    items: Person[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  data: PeopleSearchPage;
   timestamp: string;
 }
 
@@ -23,18 +25,18 @@ interface PeopleSearchResponse {
 export class PersonService {
   private http = inject(HttpClient);
 
-  searchPeople(query: string) {
+  searchPeople(query: string, page = 1) {
     return this.http.get<PeopleSearchResponse>(
       'http://localhost:3500/api/people/search',
       {
         params: {
           q: query,
-          page: '1',
+          page: String(page),
           limit: '20',
         },
       }
     ).pipe(
-      map(response => response.data.items)
+      map(response => response.data)
     );
   }
 }

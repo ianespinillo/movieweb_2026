@@ -71,10 +71,24 @@
 }
 
 .result-card {
+    display: block;
     padding: 20px;
     border: 1px solid #ddd;
     border-radius: 10px;
     background-color: #fafafa;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.result-card:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
 }
 
 .result-card h3 {
@@ -86,6 +100,36 @@
     margin: 0;
     color: #777;
     font-size: 14px;
+}
+
+/* Botones de paginación */
+
+.load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+.load-more button {
+    padding: 12px 24px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #222;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.load-more button:hover:not(:disabled) {
+    background-color: #f3f4f6;
+}
+
+.load-more button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .error-message {
@@ -109,21 +153,8 @@
     .search-form button {
         width: 100%;
     }
-}
 
-.result-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.result-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.result-card:focus-visible {
-  outline: 3px solid #2563eb;
-  outline-offset: 3px;
+    .load-more button {
+        width: 100%;
+    }
 }

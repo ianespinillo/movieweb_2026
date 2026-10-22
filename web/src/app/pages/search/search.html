@@ -45,6 +45,20 @@
                 }
             </div>
             }
+
+            @if (hasMoreMovies()) {
+            <div class="load-more">
+                <button type="button" (click)="loadMoreMovies()" [disabled]="loadingMoreMovies()">
+                    {{ loadingMoreMovies() ? 'Cargando...' : 'Ver más películas' }}
+                </button>
+            </div>
+            }
+
+            @if (moreMoviesError()) {
+            <p class="error-message">
+                No se pudieron cargar más películas. Podés volver a intentar.
+            </p>
+            }
         </section>
 
         <section class="result-section">
@@ -56,7 +70,7 @@
             </p>
             } @else if (actors.length === 0) {
             <p class="empty-message">
-                No se encontraron actores.
+                No se encontraron actores en los resultados cargados.
             </p>
             } @else {
             <div class="result-grid">
@@ -79,7 +93,7 @@
             </p>
             } @else if (directors.length === 0) {
             <p class="empty-message">
-                No se encontraron directores.
+                No se encontraron directores en los resultados cargados.
             </p>
             } @else {
             <div class="result-grid">
@@ -90,6 +104,20 @@
                 </a>
                 }
             </div>
+            }
+
+            @if (hasMorePeople()) {
+            <div class="load-more">
+                <button type="button" (click)="loadMorePeople()" [disabled]="loadingMorePeople()">
+                    {{ loadingMorePeople() ? 'Cargando...' : 'Ver más actores y directores' }}
+                </button>
+            </div>
+            }
+
+            @if (morePeopleError()) {
+            <p class="error-message">
+                No se pudieron cargar más personas. Podés volver a intentar.
+            </p>
             }
         </section>
 
