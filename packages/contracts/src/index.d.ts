@@ -7,5 +7,6 @@
 
 export * from './http';
 export * from './movies';
+export * from './people';
 export * from './auth';
 export * from './tmdb';

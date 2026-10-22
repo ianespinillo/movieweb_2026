@@ -8,8 +8,8 @@ import authRouter from './routes/auth.js';
 import tmdbRouter from './routes/tmdb.js';
 import moviesRouter   from './routes/movies.js';
 import keywordsRouter from './routes/keywords.js';
+import peopleRouter   from './routes/people.js';
 // Uncomment as each route file is implemented:
-// import peopleRouter   from './routes/people.js';
 // import usersRouter    from './routes/users.js';
 // import activityRouter from './routes/activity.js';
 
@@ -24,7 +24,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/tmdb', tmdbRouter);
 app.use('/api/movies',   moviesRouter);
 app.use('/api/keywords', keywordsRouter);
-// app.use('/api/people',   peopleRouter);
+app.use('/api/people',   peopleRouter);
 
 // Protected routes (authenticate middleware applied inside each router)
 // app.use('/api/users',    usersRouter);

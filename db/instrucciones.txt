@@ -12,3 +12,8 @@ set PGCLIENTENCODING=UTF8
 -- Cerrar la consola y ejecutar:
 
 psql --single-transaction -d movies -U postgres -f 00_load_all.sql
+
+-- Después, crear las tablas de usuarios y los índices de personas:
+
+psql -d movies -U postgres -f 13_users.sql
+psql -d movies -U postgres -f 14_people_indexes.sql

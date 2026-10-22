@@ -10,6 +10,7 @@ import type {
   Language,
   Movie,
   MovieDetail,
+  PersonRef,
 } from '@movieweb/contracts';
 
 // Everything the API sends to the frontend lives in packages/contracts.
@@ -40,20 +41,7 @@ export interface UserRow {
 
 export type MovieRow = Movie;
 
-export interface PersonRow {
-  person_id: number;
-  person_name: string;
-}
-
-export interface PersonSearchRow extends PersonRow {
-  is_actor: boolean;
-  is_director: boolean;
-}
-
-export interface PersonDetailRow extends PersonRow {
-  as_actor: MovieRow[];
-  as_director: MovieRow[];
-}
+export type PersonRow = PersonRef;
 
 export type CastRow     = CastMember;
 export type CrewRow     = CrewMember;
