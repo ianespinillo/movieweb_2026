@@ -1,0 +1,127 @@
+<main class="search-page">
+    <header class="search-header">
+        <h1>Buscar en MovieWeb</h1>
+        <p>Encontrá películas, actores y directores.</p>
+    </header>
+
+    <div class="search-form">
+        <input type="search" placeholder="Buscar película o persona" aria-label="Buscar película o persona"
+            [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" (keyup.enter)="search()" />
+
+        <button type="button" (click)="search()">
+            Buscar
+        </button>
+    </div>
+
+    @if (hasSearched()) {
+    <div class="search-results">
+        <p class="search-summary">
+            Resultados de búsqueda para:
+            <strong>{{ submittedQuery() }}</strong>
+        </p>
+
+        @if (isLoading()) {
+        <p class="status-message">Buscando resultados...</p>
+        } @else {
+
+        <section class="result-section">
+            <h2>Películas</h2>
+
+            @if (moviesError()) {
+            <p class="error-message">
+                No se pudieron cargar las películas.
+            </p>
+            } @else if (movies.length === 0) {
+            <p class="empty-message">
+                No se encontraron películas.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (movie of movies; track movie.movie_id) {
+                <a class="result-card" [routerLink]="['/movies', movie.movie_id]">
+                    <h3>{{ movie.title }}</h3>
+                    <p>Película</p>
+                </a>
+                }
+            </div>
+            }
+
+            @if (hasMoreMovies()) {
+            <div class="load-more">
+                <button type="button" (click)="loadMoreMovies()" [disabled]="loadingMoreMovies()">
+                    {{ loadingMoreMovies() ? 'Cargando...' : 'Ver más películas' }}
+                </button>
+            </div>
+            }
+
+            @if (moreMoviesError()) {
+            <p class="error-message">
+                No se pudieron cargar más películas. Podés volver a intentar.
+            </p>
+            }
+        </section>
+
+        <section class="result-section">
+            <h2>Actores</h2>
+
+            @if (peopleError()) {
+            <p class="error-message">
+                No se pudieron cargar los actores.
+            </p>
+            } @else if (actors.length === 0) {
+            <p class="empty-message">
+                No se encontraron actores en los resultados cargados.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (actor of actors; track actor.person_id) {
+                <a class="result-card" [routerLink]="['/people', actor.person_id]">
+                    <h3>{{ actor.person_name }}</h3>
+                    <p>Actor</p>
+                </a>
+                }
+            </div>
+            }
+        </section>
+
+        <section class="result-section">
+            <h2>Directores</h2>
+
+            @if (peopleError()) {
+            <p class="error-message">
+                No se pudieron cargar los directores.
+            </p>
+            } @else if (directors.length === 0) {
+            <p class="empty-message">
+                No se encontraron directores en los resultados cargados.
+            </p>
+            } @else {
+            <div class="result-grid">
+                @for (director of directors; track director.person_id) {
+                <a class="result-card" [routerLink]="['/people', director.person_id]">
+                    <h3>{{ director.person_name }}</h3>
+                    <p>Director</p>
+                </a>
+                }
+            </div>
+            }
+
+            @if (hasMorePeople()) {
+            <div class="load-more">
+                <button type="button" (click)="loadMorePeople()" [disabled]="loadingMorePeople()">
+                    {{ loadingMorePeople() ? 'Cargando...' : 'Ver más actores y directores' }}
+                </button>
+            </div>
+            }
+
+            @if (morePeopleError()) {
+            <p class="error-message">
+                No se pudieron cargar más personas. Podés volver a intentar.
+            </p>
+            }
+        </section>
+
+        }
+    </div>
+    }
+</main>
