@@ -3,7 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 
+import type {
+  MovieDetail,
+  TmdbMovieMeta,
+  TmdbVideo,
+} from '@movieweb/contracts';
+
 import { Movie as MovieModel } from '../models/movie.model';
+import { MOVIE_ROUTES, TMDB_ROUTES } from './api-routes';
 
 export interface MovieSearchPage {
   items: MovieModel[];
@@ -13,9 +20,9 @@ export interface MovieSearchPage {
   totalPages: number;
 }
 
-interface MovieSearchResponse {
+interface ApiResponse<T> {
   success: true;
-  data: MovieSearchPage;
+  data: T;
   timestamp: string;
 }
 
@@ -26,8 +33,8 @@ export class Movie {
   private http = inject(HttpClient);
 
   searchMovies(query: string, page = 1) {
-    return this.http.get<MovieSearchResponse>(
-      'http://localhost:3500/api/movies/search',
+    return this.http.get<ApiResponse<MovieSearchPage>>(
+      MOVIE_ROUTES.search,
       {
         params: {
           q: query,
@@ -35,6 +42,30 @@ export class Movie {
           limit: '20',
         },
       }
+    ).pipe(
+      map(response => response.data)
+    );
+  }
+
+  getMovieById(id: number | string) {
+    return this.http.get<ApiResponse<MovieDetail>>(
+      MOVIE_ROUTES.detail(id)
+    ).pipe(
+      map(response => response.data)
+    );
+  }
+
+  getTmdbMovie(id: number | string) {
+    return this.http.get<ApiResponse<TmdbMovieMeta>>(
+      TMDB_ROUTES.movie(id)
+    ).pipe(
+      map(response => response.data)
+    );
+  }
+
+  getMovieVideos(id: number | string) {
+    return this.http.get<ApiResponse<TmdbVideo[]>>(
+      TMDB_ROUTES.videos(id)
     ).pipe(
       map(response => response.data)
     );

@@ -1,7 +1,281 @@
-<main>
-    <a routerLink="/search">← Volver al buscador</a>
+<main class="movie-page">
+    <a routerLink="/search" class="back-link">
+        ← Volver al buscador
+    </a>
 
-    <h1>Detalle de película</h1>
+    @if (isLoading()) {
+    <div class="status-message">
+        <h2>Cargando película...</h2>
+        <p>Obteniendo información de MovieWeb.</p>
+    </div>
+    } @else if (hasError()) {
+    <div class="status-message error-message">
+        <h2>No se pudo cargar la película</h2>
+        <p>
+            La película no existe o hubo un problema al consultar la base de datos.
+        </p>
+        <a routerLink="/search">Volver a buscar</a>
+    </div>
+    } @else if (movie(); as film) {
 
-    <p>ID de la película: {{ movieId }}</p>
+    <section class="movie-hero" [style.background-image]="tmdb()?.backdrop_path
+        ? 'linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.88)), url('
+          + getImageUrl(tmdb()!.backdrop_path, 'original') + ')'
+        : 'none'">
+
+        <div class="hero-content">
+
+            <div class="poster-container">
+                @if (tmdb()?.poster_path) {
+                <img class="movie-poster" [src]="getImageUrl(tmdb()!.poster_path)" [alt]="'Póster de ' + film.title" />
+                } @else {
+                <div class="poster-placeholder">
+                    Póster no disponible
+                </div>
+                }
+            </div>
+
+            <div class="hero-info">
+                <h1>{{ film.title }}</h1>
+
+                @if (tmdb()?.tagline || film.tagline) {
+                <p class="tagline">
+                    {{ tmdb()?.tagline || film.tagline }}
+                </p>
+                }
+
+                <div class="movie-meta">
+                    <span>{{ getYear(film.release_date) }}</span>
+                    <span>{{ formatRuntime(film.runtime) }}</span>
+
+                    @if (film.vote_average !== null) {
+                    <span>
+                        ★ {{ film.vote_average.toFixed(1) }}/10
+                    </span>
+                    }
+                </div>
+
+                @if (film.genres.length > 0) {
+                <div class="genre-list">
+                    @for (genre of film.genres; track genre.genre_id) {
+                    <span class="genre-tag">
+                        {{ genre.genre_name }}
+                    </span>
+                    }
+                </div>
+                }
+
+                @if (film.overview) {
+                <h2>Sinopsis</h2>
+                <p class="overview">{{ film.overview }}</p>
+                } @else {
+                <p class="overview">
+                    No hay una sinopsis disponible.
+                </p>
+                }
+
+                @if (film.directors.length > 0) {
+                <p class="director-summary">
+                    <strong>Dirección:</strong>
+                    @for (director of film.directors; track director.person_id; let last = $last) {
+                    <a [routerLink]="['/people', director.person_id]">
+                        {{ director.person_name }}
+                    </a>{{ last ? '' : ', ' }}
+                    }
+                </p>
+                }
+
+                @if (film.homepage) {
+                <a class="external-link" [href]="film.homepage" target="_blank" rel="noopener noreferrer">
+                    Sitio oficial ↗
+                </a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="movie-content">
+
+        <section class="detail-section">
+            <h2>Información de la película</h2>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Fecha de estreno</strong>
+                    <span>{{ film.release_date || 'Sin información' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Duración</strong>
+                    <span>{{ formatRuntime(film.runtime) }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Estado</strong>
+                    <span>{{ film.movie_status || 'Sin información' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Calificación</strong>
+                    <span>
+                        {{ film.vote_average !== null
+                        ? film.vote_average.toFixed(1) + '/10'
+                        : 'Sin información' }}
+                    </span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Cantidad de votos</strong>
+                    <span>{{ film.vote_count ?? 'Sin información' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Popularidad</strong>
+                    <span>{{ film.popularity ?? 'Sin información' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Presupuesto</strong>
+                    <span>{{ formatMoney(film.budget) }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Recaudación</strong>
+                    <span>{{ formatMoney(film.revenue) }}</span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Países de producción</strong>
+                    <span>
+                        @for (country of film.countries; track country.country_iso; let last = $last) {
+                        {{ country.country_name }}{{ last ? '' : ', ' }}
+                        } @empty {
+                        Sin información
+                        }
+                    </span>
+                </div>
+
+                <div class="info-item">
+                    <strong>Idiomas</strong>
+                    <span>
+                        @for (language of film.languages; track language.language_iso + '-' + language.language_role;
+                        let last = $last) {
+                        {{ language.language_name }}{{ last ? '' : ', ' }}
+                        } @empty {
+                        Sin información
+                        }
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section class="detail-section">
+            <h2>Tráiler</h2>
+
+            @if (getTrailerUrl(); as trailerUrl) {
+            <div class="video-container">
+                <iframe [src]="trailerUrl" title="Tráiler de la película"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+                </iframe>
+            </div>
+            } @else if (tmdbError()) {
+            <p class="empty-message">
+                No se pudo consultar la información multimedia.
+            </p>
+            } @else {
+            <p class="empty-message">
+                No hay un tráiler disponible para esta película.
+            </p>
+            }
+        </section>
+
+        <section class="detail-section">
+            <h2>Reparto</h2>
+
+            @if (film.cast.length > 0) {
+            <div class="people-grid">
+                @for (actor of film.cast; track actor.person_id) {
+                <a class="person-card" [routerLink]="['/people', actor.person_id]">
+                    <h3>{{ actor.person_name }}</h3>
+                    <p>
+                        {{ actor.character_name || 'Personaje no especificado' }}
+                    </p>
+                </a>
+                }
+            </div>
+            } @else {
+            <p class="empty-message">
+                No hay información del reparto.
+            </p>
+            }
+        </section>
+
+        @if (film.directors.length > 0) {
+        <section class="detail-section">
+            <h2>Dirección</h2>
+            <div class="people-grid">
+                @for (director of film.directors; track director.person_id) {
+                <a class="person-card" [routerLink]="['/people', director.person_id]">
+                    <h3>{{ director.person_name }}</h3>
+                    <p>{{ director.job }}</p>
+                </a>
+                }
+            </div>
+        </section>
+        }
+
+        @if (film.writers.length > 0) {
+        <section class="detail-section">
+            <h2>Guionistas</h2>
+            <div class="people-grid">
+                @for (writer of film.writers; track writer.person_id + '-' + writer.job) {
+                <a class="person-card" [routerLink]="['/people', writer.person_id]">
+                    <h3>{{ writer.person_name }}</h3>
+                    <p>{{ writer.job }}</p>
+                </a>
+                }
+            </div>
+        </section>
+        }
+
+        @if (film.crew.length > 0) {
+        <section class="detail-section">
+            <h2>Equipo técnico</h2>
+            <div class="people-grid">
+                @for (member of film.crew; track $index) {
+                <a class="person-card" [routerLink]="['/people', member.person_id]">
+                    <h3>{{ member.person_name }}</h3>
+                    <p>{{ member.job }} — {{ member.department_name }}</p>
+                </a>
+                }
+            </div>
+        </section>
+        }
+
+        @if (film.companies.length > 0) {
+        <section class="detail-section">
+            <h2>Productoras</h2>
+            <div class="tag-list">
+                @for (company of film.companies; track company.company_id) {
+                <span class="simple-tag">{{ company.company_name }}</span>
+                }
+            </div>
+        </section>
+        }
+
+        @if (film.keywords.length > 0) {
+        <section class="detail-section">
+            <h2>Palabras clave</h2>
+            <div class="tag-list">
+                @for (keyword of film.keywords; track keyword.keyword_id) {
+                <span class="simple-tag">{{ keyword.keyword_name }}</span>
+                }
+            </div>
+        </section>
+        }
+
+        <p class="movie-id">ID de película: {{ film.movie_id }}</p>
+    </div>
+    }
 </main>
