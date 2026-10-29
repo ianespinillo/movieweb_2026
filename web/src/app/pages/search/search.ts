@@ -1,4 +1,3 @@
-
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,17 +16,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   Subject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
   forkJoin,
   from,
-  of,
-  catchError,
   map,
   mergeMap,
+  of,
   switchMap,
   tap,
 } from 'rxjs';
 
-import type { TmdbPersonMeta } from '@movieweb/contracts';
+import type { Keyword, KeywordMovie, TmdbPersonMeta } from '@movieweb/contracts';
 
 import { Movie } from '../../models/movie.model';
 import { Person } from '../../models/person.model';
@@ -35,6 +37,7 @@ import { Person } from '../../models/person.model';
 import {
   Movie as MovieService,
   MovieSearchPage,
+  KeywordSearchPage,
 } from '../../services/movie';
 
 import {
@@ -51,6 +54,17 @@ interface ApiResponse<T> {
   success: true;
   data: T;
   timestamp: string;
+}
+
+export interface AutocompleteSuggestion {
+  id: string | number;
+  title: string;
+  subtitle: string;
+  type: 'movie' | 'person' | 'keyword';
+  typeLabel: string;
+  icon: string;
+  route?: (string | number)[];
+  keyword?: string;
 }
 
 @Component({
@@ -88,21 +102,28 @@ export class Search {
   readonly isLoading = signal(false);
 
   readonly moviesError = signal(false);
+  readonly keywordsError = signal(false);
   readonly peopleError = signal(false);
 
   readonly loadingMoreMovies = signal(false);
+  readonly loadingMoreKeywords = signal(false);
   readonly loadingMorePeople = signal(false);
 
   readonly moreMoviesError = signal(false);
+  readonly moreKeywordsError = signal(false);
   readonly morePeopleError = signal(false);
 
   readonly moviesPage = signal(0);
   readonly moviesTotalPages = signal(0);
 
+  readonly keywordPage = signal(0);
+  readonly keywordTotalPages = signal(0);
+
   readonly peoplePage = signal(0);
   readonly peopleTotalPages = signal(0);
 
   readonly movies = signal<Movie[]>([]);
+  readonly keywordMovies = signal<KeywordMovie[]>([]);
   readonly actors = signal<Person[]>([]);
   readonly directors = signal<Person[]>([]);
 
@@ -111,6 +132,14 @@ export class Search {
 
   readonly suggestedMovies = signal<Movie[]>([]);
   readonly loadingSuggestions = signal(true);
+
+  // Autocomplete
+  private readonly autocompleteSubject = new Subject<string>();
+  readonly autocompleteSuggestions = signal<AutocompleteSuggestion[]>([]);
+  readonly isAutocompleteLoading = signal(false);
+  readonly showAutocomplete = signal(false);
+  readonly activeSuggestionIndex = signal(-1);
+  readonly isInputFocused = signal(false);
 
   // Películas destacadas para la portada
   private readonly suggestedIds = [
@@ -122,6 +151,7 @@ export class Search {
 
   constructor() {
     this.loadSuggestions();
+    this.initAutocomplete();
 
     // Búsqueda normal
     this.searchRequests.pipe(
@@ -133,19 +163,26 @@ export class Search {
         this.isLoading.set(true);
 
         this.moviesError.set(false);
+        this.keywordsError.set(false);
         this.peopleError.set(false);
+
         this.moreMoviesError.set(false);
+        this.moreKeywordsError.set(false);
         this.morePeopleError.set(false);
 
         this.loadingMoreMovies.set(false);
+        this.loadingMoreKeywords.set(false);
         this.loadingMorePeople.set(false);
 
         this.moviesPage.set(0);
         this.moviesTotalPages.set(0);
+        this.keywordPage.set(0);
+        this.keywordTotalPages.set(0);
         this.peoplePage.set(0);
         this.peopleTotalPages.set(0);
 
         this.movies.set([]);
+        this.keywordMovies.set([]);
         this.actors.set([]);
         this.directors.set([]);
       }),
@@ -159,9 +196,22 @@ export class Search {
             })),
             catchError(error => {
               console.error('Error buscando películas:', error);
-
               return of({
                 data: null as MovieSearchPage | null,
+                failed: true,
+              });
+            })
+          ),
+
+          keywordMovies: this.movieService.searchByKeyword(query).pipe(
+            map(data => ({
+              data,
+              failed: false,
+            })),
+            catchError(error => {
+              console.error('Error buscando por palabra clave:', error);
+              return of({
+                data: null as KeywordSearchPage | null,
                 failed: true,
               });
             })
@@ -174,7 +224,6 @@ export class Search {
             })),
             catchError(error => {
               console.error('Error buscando personas:', error);
-
               return of({
                 data: null as PeopleSearchPage | null,
                 failed: true,
@@ -185,13 +234,21 @@ export class Search {
       ),
 
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(({ movies, people }) => {
+    ).subscribe(({ movies, keywordMovies, people }) => {
       if (movies.data) {
         this.movies.set(movies.data.items);
         this.moviesPage.set(movies.data.page);
         this.moviesTotalPages.set(movies.data.totalPages);
 
         this.loadPosters(movies.data.items.slice(0, 8));
+      }
+
+      if (keywordMovies.data) {
+        this.keywordMovies.set(keywordMovies.data.items);
+        this.keywordPage.set(keywordMovies.data.page);
+        this.keywordTotalPages.set(keywordMovies.data.totalPages);
+
+        this.loadPosters(keywordMovies.data.items.slice(0, 8));
       }
 
       if (people.data) {
@@ -203,11 +260,12 @@ export class Search {
       }
 
       this.moviesError.set(movies.failed);
+      this.keywordsError.set(keywordMovies.failed);
       this.peopleError.set(people.failed);
       this.isLoading.set(false);
     });
 
-    // Recuperar búsqueda al volver de una película
+    // Recuperar búsqueda al volver de una película o persona
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
@@ -233,6 +291,93 @@ export class Search {
       });
   }
 
+  private initAutocomplete(): void {
+    this.autocompleteSubject.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      switchMap(term => {
+        const trimmed = term.trim();
+        if (!trimmed || trimmed.length < 2) {
+          return of<AutocompleteSuggestion[]>([]);
+        }
+
+        this.isAutocompleteLoading.set(true);
+
+        return forkJoin({
+          movies: this.movieService.searchMovies(trimmed, 1, 5).pipe(
+            map(res => res.items),
+            catchError(() => of([] as Movie[]))
+          ),
+          people: this.personService.searchPeople(trimmed, 1, 3).pipe(
+            map(res => res.items),
+            catchError(() => of([] as Person[]))
+          ),
+          keywords: this.movieService.suggestKeywords(trimmed, 3).pipe(
+            catchError(() => of([] as Keyword[]))
+          ),
+        }).pipe(
+          map(({ movies, people, keywords }) => {
+            const list: AutocompleteSuggestion[] = [];
+
+            // 1. Películas sugeridas
+            for (const m of movies) {
+              const year = m.release_date ? m.release_date.slice(0, 4) : '';
+              list.push({
+                id: `m_${m.movie_id}`,
+                title: m.title,
+                subtitle: year ? `${year} • Película` : 'Película',
+                type: 'movie',
+                typeLabel: 'Película',
+                icon: '🎬',
+                route: ['/movies', m.movie_id],
+              });
+            }
+
+            // 2. Personas sugeridas (actores / directores)
+            for (const p of people) {
+              const role = p.is_director && p.is_actor
+                ? 'Director / Actor'
+                : p.is_director
+                ? 'Director'
+                : 'Actor';
+              list.push({
+                id: `p_${p.person_id}`,
+                title: p.person_name,
+                subtitle: role,
+                type: 'person',
+                typeLabel: role,
+                icon: '👤',
+                route: ['/people', p.person_id],
+              });
+            }
+
+            // 3. Palabras clave sugeridas
+            for (const k of keywords) {
+              list.push({
+                id: `k_${k.keyword_id}`,
+                title: k.keyword_name,
+                subtitle: 'Palabra clave',
+                type: 'keyword',
+                typeLabel: 'Keyword',
+                icon: '🏷️',
+                keyword: k.keyword_name,
+              });
+            }
+
+            // Máximo 5 sugerencias
+            return list.slice(0, 5);
+          }),
+          finalize(() => this.isAutocompleteLoading.set(false))
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(suggestions => {
+      this.autocompleteSuggestions.set(suggestions);
+      this.showAutocomplete.set(suggestions.length > 0 && this.isInputFocused());
+      this.activeSuggestionIndex.set(-1);
+    });
+  }
+
   // Restaurar resultados y paginación
   private restoreSearch(saved: import(
     '../../services/search-state'
@@ -241,6 +386,11 @@ export class Search {
     this.submittedQuery.set(saved.query);
 
     this.movies.set([...saved.movies]);
+    if (saved.keywordMovies) {
+      this.keywordMovies.set([...saved.keywordMovies]);
+      this.keywordPage.set(saved.keywordsPage ?? 0);
+      this.keywordTotalPages.set(saved.keywordsTotalPages ?? 0);
+    }
     this.actors.set([...saved.actors]);
     this.directors.set([...saved.directors]);
 
@@ -254,18 +404,19 @@ export class Search {
     this.photos.set({ ...saved.photos });
 
     this.moviesError.set(false);
+    this.keywordsError.set(false);
     this.peopleError.set(false);
     this.moreMoviesError.set(false);
+    this.moreKeywordsError.set(false);
     this.morePeopleError.set(false);
 
     this.loadingMoreMovies.set(false);
+    this.loadingMoreKeywords.set(false);
     this.loadingMorePeople.set(false);
 
     this.hasSearched.set(true);
     this.isLoading.set(false);
 
-    // Esperar a que Angular vuelva a dibujar los resultados.
-    // Se limita a unos pocos intentos para no bloquear el navegador.
     let attempts = 0;
     const restoreScroll = () => {
       this.viewportScroller.scrollToPosition([0, saved.scrollY]);
@@ -332,7 +483,7 @@ export class Search {
   }
 
   // Pósters TMDB
-  private loadPosters(items: Movie[]): void {
+  private loadPosters(items: { movie_id: number }[]): void {
     const missing = items.filter(
       movie => !(movie.movie_id in this.posters())
     );
@@ -428,9 +579,94 @@ export class Search {
     ]);
   }
 
+  // Interacción de búsqueda y autocomplete
+  onSearchInput(value: string): void {
+    this.searchQuery.set(value);
+    this.autocompleteSubject.next(value);
+  }
+
+  onInputFocus(): void {
+    this.isInputFocused.set(true);
+    if (this.autocompleteSuggestions().length > 0) {
+      this.showAutocomplete.set(true);
+    }
+  }
+
+  onInputBlur(): void {
+    // Breve espera para permitir click en las sugerencias
+    setTimeout(() => {
+      this.isInputFocused.set(false);
+      this.showAutocomplete.set(false);
+    }, 220);
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    const suggestions = this.autocompleteSuggestions();
+    const isDropdownVisible = this.showAutocomplete() && suggestions.length > 0;
+
+    if (event.key === 'ArrowDown') {
+      if (!isDropdownVisible) return;
+      event.preventDefault();
+      const nextIndex = (this.activeSuggestionIndex() + 1) % suggestions.length;
+      this.activeSuggestionIndex.set(nextIndex);
+    } else if (event.key === 'ArrowUp') {
+      if (!isDropdownVisible) return;
+      event.preventDefault();
+      const prevIndex = (this.activeSuggestionIndex() - 1 + suggestions.length) % suggestions.length;
+      this.activeSuggestionIndex.set(prevIndex);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const activeIdx = this.activeSuggestionIndex();
+      if (isDropdownVisible && activeIdx >= 0 && activeIdx < suggestions.length) {
+        this.selectSuggestion(suggestions[activeIdx]);
+      } else {
+        this.search();
+      }
+    } else if (event.key === 'Escape') {
+      this.showAutocomplete.set(false);
+      this.activeSuggestionIndex.set(-1);
+    }
+  }
+
+  selectSuggestion(item: AutocompleteSuggestion, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.showAutocomplete.set(false);
+
+    if (item.type === 'movie' || item.type === 'person') {
+      if (item.route) {
+        this.saveSearch();
+        this.router.navigate(item.route);
+      }
+    } else if (item.type === 'keyword') {
+      const kw = item.keyword || item.title;
+      this.searchKeyword(kw);
+    }
+  }
+
+  searchKeyword(keyword: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.searchQuery.set(keyword);
+    this.showAutocomplete.set(false);
+    this.search();
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+    this.autocompleteSuggestions.set([]);
+    this.showAutocomplete.set(false);
+    this.activeSuggestionIndex.set(-1);
+  }
+
   // Ejecutar búsqueda
   search(): void {
     const query = this.searchQuery().trim();
+    this.showAutocomplete.set(false);
 
     if (!query) return;
 
@@ -446,7 +682,7 @@ export class Search {
     });
   }
 
-  // Guardar búsqueda al abrir una película
+  // Guardar búsqueda al navegar
   saveSearch(): void {
     if (!this.hasSearched() || this.isLoading()) return;
 
@@ -454,11 +690,14 @@ export class Search {
       query: this.submittedQuery(),
 
       movies: [...this.movies()],
+      keywordMovies: [...this.keywordMovies()],
       actors: [...this.actors()],
       directors: [...this.directors()],
 
       moviesPage: this.moviesPage(),
       moviesTotalPages: this.moviesTotalPages(),
+      keywordsPage: this.keywordPage(),
+      keywordsTotalPages: this.keywordTotalPages(),
 
       peoplePage: this.peoplePage(),
       peopleTotalPages: this.peopleTotalPages(),
@@ -474,6 +713,12 @@ export class Search {
     return !this.moviesError()
       && this.moviesPage() > 0
       && this.moviesPage() < this.moviesTotalPages();
+  }
+
+  hasMoreKeywords(): boolean {
+    return !this.keywordsError()
+      && this.keywordPage() > 0
+      && this.keywordPage() < this.keywordTotalPages();
   }
 
   hasMorePeople(): boolean {
@@ -522,6 +767,50 @@ export class Search {
         console.error('Error cargando películas:', error);
         this.moreMoviesError.set(true);
         this.loadingMoreMovies.set(false);
+      },
+    });
+  }
+
+  loadMoreKeywords(): void {
+    if (
+      this.isLoading() ||
+      this.loadingMoreKeywords() ||
+      !this.hasMoreKeywords()
+    ) return;
+
+    const version = this.searchVersion;
+    const nextPage = this.keywordPage() + 1;
+
+    this.loadingMoreKeywords.set(true);
+    this.moreKeywordsError.set(false);
+
+    this.movieService.searchByKeyword(
+      this.submittedQuery(),
+      nextPage
+    ).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: result => {
+        if (version !== this.searchVersion) return;
+
+        this.keywordMovies.update(current => [
+          ...current,
+          ...result.items,
+        ]);
+
+        this.keywordPage.set(result.page);
+        this.keywordTotalPages.set(result.totalPages);
+
+        this.loadingMoreKeywords.set(false);
+        this.loadPosters(result.items.slice(0, 8));
+      },
+
+      error: error => {
+        if (version !== this.searchVersion) return;
+
+        console.error('Error cargando películas por palabra clave:', error);
+        this.moreKeywordsError.set(true);
+        this.loadingMoreKeywords.set(false);
       },
     });
   }

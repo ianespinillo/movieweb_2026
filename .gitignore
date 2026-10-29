@@ -2,6 +2,7 @@
 .env
 api/.env
 !api/.env.example
+.atl/
 
 # Builds (Angular / TypeScript)
 dist/

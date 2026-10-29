@@ -1,19 +1,28 @@
-
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 
 import type {
+  Keyword,
+  KeywordMovie,
   MovieDetail,
   TmdbMovieMeta,
   TmdbVideo,
 } from '@movieweb/contracts';
 
 import { Movie as MovieModel } from '../models/movie.model';
-import { MOVIE_ROUTES, TMDB_ROUTES } from './api-routes';
+import { KEYWORD_ROUTES, MOVIE_ROUTES, TMDB_ROUTES } from './api-routes';
 
 export interface MovieSearchPage {
   items: MovieModel[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface KeywordSearchPage {
+  items: KeywordMovie[];
   total: number;
   page: number;
   limit: number;
@@ -28,18 +37,47 @@ interface ApiResponse<T> {
 
 @Injectable({
   providedIn: 'root',
-})
+  })
 export class Movie {
   private http = inject(HttpClient);
 
-  searchMovies(query: string, page = 1) {
+  searchMovies(query: string, page = 1, limit = 20) {
     return this.http.get<ApiResponse<MovieSearchPage>>(
       MOVIE_ROUTES.search,
       {
         params: {
           q: query,
           page: String(page),
-          limit: '20',
+          limit: String(limit),
+        },
+      }
+    ).pipe(
+      map(response => response.data)
+    );
+  }
+
+  searchByKeyword(query: string, page = 1, limit = 20) {
+    return this.http.get<ApiResponse<KeywordSearchPage>>(
+      KEYWORD_ROUTES.search,
+      {
+        params: {
+          q: query,
+          page: String(page),
+          limit: String(limit),
+        },
+      }
+    ).pipe(
+      map(response => response.data)
+    );
+  }
+
+  suggestKeywords(query: string, limit = 5) {
+    return this.http.get<ApiResponse<Keyword[]>>(
+      KEYWORD_ROUTES.suggest,
+      {
+        params: {
+          q: query,
+          limit: String(limit),
         },
       }
     ).pipe(

@@ -5,9 +5,31 @@ import { asyncHandler } from '../http/middleware.js';
 import { paginated, readPagination } from '../http/pagination.js';
 import { ok } from '../http/response.js';
 import { containsPattern, readSearchTerm } from '../utils/search.js';
-import { KeywordMovie } from '../types/index.js';
+import { KeywordMovie, KeywordRow } from '../types/index.js';
 
 const router = Router();
+
+// GET /api/keywords?q=:term&limit= — list of keywords matching term for autocomplete
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const q = readSearchTerm(req);
+  if (!q) {
+    return ok(res, []);
+  }
+
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit) || '5', 10)), 20);
+  const pattern = containsPattern(q);
+
+  const result = await pool.query<KeywordRow>(
+    `SELECT keyword_id, keyword_name
+     FROM keyword
+     WHERE keyword_name ILIKE $1
+     ORDER BY length(keyword_name) ASC, keyword_name ASC
+     LIMIT $2`,
+    [pattern, limit]
+  );
+
+  ok(res, result.rows);
+}));
 
 // GET /api/keywords/search?q=:term&page=&limit= — movies that have a keyword containing the term
 router.get('/search', asyncHandler(async (req: Request, res: Response) => {

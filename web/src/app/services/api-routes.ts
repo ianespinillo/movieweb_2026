@@ -14,6 +14,8 @@ export const MOVIE_ROUTES = {
 export const KEYWORD_ROUTES = {
   /** ?q=&page=&limit= → PaginatedResponse<KeywordMovie> */
   search: `${API_URL}/keywords/search`,
+  /** ?q=&limit= → Keyword[] */
+  suggest: `${API_URL}/keywords`,
 } as const;
 
 export const PEOPLE_ROUTES = {

@@ -27,14 +27,14 @@ interface PeopleSearchResponse {
 export class PersonService {
   private readonly http = inject(HttpClient);
 
-  searchPeople(query: string, page = 1) {
+  searchPeople(query: string, page = 1, limit = 20) {
     return this.http.get<PeopleSearchResponse>(
       PEOPLE_ROUTES.search,
       {
         params: {
           q: query,
           page: String(page),
-          limit: '20',
+          limit: String(limit),
         },
       }
     ).pipe(

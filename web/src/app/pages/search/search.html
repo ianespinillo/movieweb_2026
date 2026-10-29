@@ -5,6 +5,69 @@
             Movie<span>Web</span>
         </a>
 
+        <!-- Buscador integrado en el navbar con Autocomplete (hasta 5 items) -->
+        <div class="navbar-search-container" (click)="$event.stopPropagation()">
+            <div class="navbar-search-bar" [class.focused]="isInputFocused()">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+
+                <input
+                    type="search"
+                    class="navbar-search-input"
+                    placeholder="Buscar películas, personas o keywords..."
+                    aria-label="Buscar películas, personas o palabras clave"
+                    [value]="searchQuery()"
+                    (input)="onSearchInput($any($event.target).value)"
+                    (focus)="onInputFocus()"
+                    (blur)="onInputBlur()"
+                    (keydown)="onKeydown($event)"
+                />
+
+                @if (searchQuery()) {
+                <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Borrar búsqueda">
+                    ✕
+                </button>
+                }
+
+                <button type="button" class="navbar-search-btn" (click)="search()" aria-label="Ejecutar búsqueda">
+                    Buscar
+                </button>
+            </div>
+
+            <!-- Menú desplegable de Autocomplete (máx 5 sugerencias) -->
+            @if (showAutocomplete() && autocompleteSuggestions().length > 0) {
+            <div class="autocomplete-dropdown" role="listbox">
+                <div class="autocomplete-header">
+                    <span>Sugerencias rápidas</span>
+                    <span class="autocomplete-count">{{ autocompleteSuggestions().length }} de 5</span>
+                </div>
+
+                <ul class="autocomplete-list">
+                    @for (item of autocompleteSuggestions(); track item.id; let i = $index) {
+                    <li
+                        class="autocomplete-item"
+                        [class.highlighted]="i === activeSuggestionIndex()"
+                        role="option"
+                        [attr.aria-selected]="i === activeSuggestionIndex()"
+                        (mousedown)="selectSuggestion(item, $event)"
+                        (mouseenter)="activeSuggestionIndex.set(i)"
+                    >
+                        <span class="item-icon">{{ item.icon }}</span>
+
+                        <div class="item-info">
+                            <span class="item-title">{{ item.title }}</span>
+                            <span class="item-subtitle">{{ item.subtitle }}</span>
+                        </div>
+
+                        <span class="item-badge" [class]="'badge-' + item.type">
+                            {{ item.typeLabel }}
+                        </span>
+                    </li>
+                    }
+                </ul>
+            </div>
+            }
+        </div>
+
         <div class="header-right">
             <a routerLink="/search" class="search-home">
                 Inicio
@@ -25,6 +88,8 @@
         </div>
     </nav>
 
+    @if (!hasSearched()) {
+
     <header class="search-header">
         <p class="eyebrow">BUSCÁ · DESCUBRÍ · EXPLORÁ</p>
 
@@ -33,19 +98,8 @@
             <span class="accent-text">gran historia.</span>
         </h1>
 
-        <p>Encontrá películas, actores y directores.</p>
+        <p>Encontrá películas por título, actores, directores o palabras clave temáticas.</p>
     </header>
-
-    <div class="search-form">
-        <input type="search" placeholder="Buscar película o persona..." aria-label="Buscar película o persona"
-            [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" (keyup.enter)="search()" />
-
-        <button type="button" (click)="search()">
-            Buscar
-        </button>
-    </div>
-
-    @if (!hasSearched()) {
 
     <section class="result-section suggestions-section">
         <h2>Descubrí estas películas</h2>
@@ -95,7 +149,7 @@
         @if (!loadingSuggestions() && suggestedMovies().length === 0) {
         <p class="empty-message">
             No se pudieron cargar las sugerencias.
-            Podés buscar cualquier película arriba.
+            Podés buscar cualquier película arriba en el navbar.
         </p>
         }
     </section>
@@ -103,17 +157,25 @@
     } @else {
 
     <div class="search-results">
-        <p class="search-summary">
-            Resultados de búsqueda para:
-            <strong>{{ submittedQuery() }}</strong>
-        </p>
+        <div class="search-summary-bar">
+            <p class="search-summary">
+                Resultados de búsqueda para:
+                <strong>«{{ submittedQuery() }}»</strong>
+            </p>
+        </div>
 
         @if (isLoading()) {
-        <p class="status-message">Buscando resultados...</p>
+        <p class="status-message">Buscando resultados en películas, palabras clave y personas...</p>
         } @else {
 
+        <!-- 1. Películas por título -->
         <section class="result-section">
-            <h2>Películas</h2>
+            <div class="section-header-row">
+                <h2>Películas</h2>
+                @if (movies().length > 0) {
+                <span class="section-counter">{{ movies().length }} películas</span>
+                }
+            </div>
 
             @if (moviesError()) {
             <p class="error-message">
@@ -121,7 +183,7 @@
             </p>
             } @else if (movies().length === 0) {
             <p class="empty-message">
-                No se encontraron películas.
+                No se encontraron películas con título coincidente.
             </p>
             } @else {
 
@@ -178,8 +240,102 @@
             }
         </section>
 
+        <!-- 2. Películas por palabras clave (Keywords) -->
+        @if (keywordMovies().length > 0 || keywordsError()) {
+        <section class="result-section keyword-movies-section">
+            <div class="section-header-row">
+                <h2>Películas por palabras clave</h2>
+                @if (keywordMovies().length > 0) {
+                <span class="section-counter">{{ keywordMovies().length }} coincidencias</span>
+                }
+            </div>
+
+            <p class="section-description">
+                Películas vinculadas con temáticas o palabras clave asociadas a «{{ submittedQuery() }}».
+            </p>
+
+            @if (keywordsError()) {
+            <p class="error-message">
+                No se pudieron cargar las películas por palabras clave.
+            </p>
+            } @else {
+            <div class="poster-grid">
+                @for (movie of keywordMovies(); track movie.movie_id) {
+                <a class="poster-card keyword-card" [routerLink]="['/movies', movie.movie_id]"
+                    [queryParams]="{ q: submittedQuery() }" (click)="saveSearch()">
+                    <div class="poster-image">
+                        @if (posters()[movie.movie_id]; as poster) {
+                        <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" width="342"
+                            height="513" />
+                        } @else {
+                        <div class="image-placeholder">
+                            <span>MovieWeb</span>
+                        </div>
+                        }
+                    </div>
+
+                    <div class="poster-info">
+                        <h3>{{ movie.title }}</h3>
+
+                        <div class="poster-meta">
+                            <span>
+                                {{ movie.release_date?.slice(0, 4) || 'Sin año' }}
+                            </span>
+
+                            @if (movie.vote_average !== null) {
+                            <span class="rating">
+                                ★ {{ movie.vote_average.toFixed(1) }}
+                            </span>
+                            }
+                        </div>
+
+                        @if (movie.matched_keywords && movie.matched_keywords.length > 0) {
+                        <div class="matched-keywords-chips">
+                            @for (kw of movie.matched_keywords.slice(0, 3); track kw) {
+                            <button
+                                type="button"
+                                class="kw-tag"
+                                (click)="searchKeyword(kw, $event)"
+                                [title]="'Buscar por palabra clave ' + kw"
+                            >
+                                🏷️ {{ kw }}
+                            </button>
+                            }
+                        </div>
+                        }
+                    </div>
+                </a>
+                }
+            </div>
+            }
+
+            @if (hasMoreKeywords()) {
+            <div class="load-more">
+                <button type="button" (click)="loadMoreKeywords()" [disabled]="loadingMoreKeywords()">
+                    {{ loadingMoreKeywords()
+                    ? 'Cargando...'
+                    : 'Ver más películas por palabra clave' }}
+                </button>
+            </div>
+            }
+
+            @if (moreKeywordsError()) {
+            <p class="error-message">
+                No se pudieron cargar más películas por palabra clave.
+                Podés volver a intentar.
+            </p>
+            }
+        </section>
+        }
+
+        <!-- 3. Actores -->
         <section class="result-section">
-            <h2>Actores</h2>
+            <div class="section-header-row">
+                <h2>Actores</h2>
+                @if (actors().length > 0) {
+                <span class="section-counter">{{ actors().length }} actores</span>
+                }
+            </div>
 
             @if (peopleError()) {
             <p class="error-message">
@@ -211,8 +367,14 @@
             }
         </section>
 
+        <!-- 4. Directores -->
         <section class="result-section">
-            <h2>Directores</h2>
+            <div class="section-header-row">
+                <h2>Directores</h2>
+                @if (directors().length > 0) {
+                <span class="section-counter">{{ directors().length }} directores</span>
+                }
+            </div>
 
             @if (peopleError()) {
             <p class="error-message">
@@ -259,6 +421,13 @@
             No se pudieron cargar más personas.
             Podés volver a intentar.
         </p>
+        }
+
+        @if (movies().length === 0 && keywordMovies().length === 0 && actors().length === 0 && directors().length === 0) {
+        <div class="empty-search-state">
+            <p class="empty-title">Sin resultados encontrados</p>
+            <p class="empty-subtitle">No encontramos películas, palabras clave ni actores/directores para «{{ submittedQuery() }}».</p>
+        </div>
         }
 
         }
