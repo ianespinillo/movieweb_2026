@@ -44,6 +44,8 @@ import {
 
 import { TMDB_ROUTES } from '../../services/api-routes';
 import { SearchState } from '../../services/search-state';
+import { AuthService } from '../../services/auth';
+import { AuthModal } from '../../components/auth-modal/auth-modal';
 
 interface ApiResponse<T> {
   success: true;
@@ -53,7 +55,7 @@ interface ApiResponse<T> {
 
 @Component({
   selector: 'app-search',
-  imports: [RouterLink],
+  imports: [RouterLink, AuthModal],
   templateUrl: './search.html',
   styleUrl: './search.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,8 +63,16 @@ interface ApiResponse<T> {
 export class Search {
   private readonly movieService = inject(MovieService);
   private readonly personService = inject(PersonService);
+  private readonly authService = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly currentUser = this.authService.currentUser;
+  readonly showAuthModal = signal(false);
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

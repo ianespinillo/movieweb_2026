@@ -689,3 +689,58 @@
     outline: 2px solid #5ee6ff;
     outline-offset: 4px;
 }
+
+
+/* Header Auth & Navigation */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.login-header-btn {
+    padding: 8px 16px;
+    background: rgba(94, 230, 255, .1);
+    border: 1px solid rgba(94, 230, 255, .4);
+    border-radius: 8px;
+    color: #5ee6ff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.login-header-btn:hover {
+    background: #5ee6ff;
+    color: #0b0f17;
+}
+
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 12px;
+    background: #142234;
+    border: 1px solid #273e54;
+    border-radius: 20px;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2eef7;
+}
+
+.logout-link {
+    background: none;
+    border: none;
+    color: #8da4b8;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: color .2s;
+}
+
+.logout-link:hover {
+    color: #ef4444;
+}

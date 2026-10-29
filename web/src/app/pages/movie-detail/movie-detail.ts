@@ -1,9 +1,9 @@
-
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -28,10 +28,14 @@ import type {
   TmdbMovieMeta,
   TmdbPersonMeta,
   TmdbVideo,
+  UserMovie,
 } from '@movieweb/contracts';
 
 import { Movie as MovieService } from '../../services/movie';
+import { AuthService } from '../../services/auth';
+import { UserService } from '../../services/user';
 import { TMDB_ROUTES } from '../../services/api-routes';
+import { AuthModal } from '../../components/auth-modal/auth-modal';
 
 interface ApiResponse<T> {
   success: true;
@@ -41,7 +45,7 @@ interface ApiResponse<T> {
 
 @Component({
   selector: 'app-movie-detail',
-  imports: [RouterLink],
+  imports: [RouterLink, AuthModal],
   templateUrl: './movie-detail.html',
   styleUrl: './movie-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +53,8 @@ interface ApiResponse<T> {
 export class MovieDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly movieService = inject(MovieService);
+  private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly sanitizer = inject(DomSanitizer);
@@ -67,6 +73,13 @@ export class MovieDetail {
   readonly directorPhotos = signal<Record<number, string | null>>({});
 
   readonly showAllCast = signal(false);
+
+  // User session and interactions
+  readonly currentUser = this.authService.currentUser;
+  readonly showAuthModal = signal(false);
+  readonly userMovie = signal<UserMovie | null>(null);
+  readonly isSavingUserMovie = signal(false);
+  readonly hoverRating = signal<number | null>(null);
 
   readonly visibleCast = computed(() => {
     const cast = this.movie()?.cast ?? [];
@@ -125,6 +138,7 @@ export class MovieDetail {
         this.castPhotos.set({});
         this.directorPhotos.set({});
         this.showAllCast.set(false);
+        this.userMovie.set(null);
       }),
 
       switchMap(params => {
@@ -175,8 +189,116 @@ export class MovieDetail {
 
       if (result.movie) {
         this.loadPersonPhotos(result.movie);
+        this.loadUserMovie(result.movie.movie_id);
       }
     });
+
+    effect(() => {
+      const user = this.currentUser();
+      const currentMovie = this.movie();
+      if (user && currentMovie) {
+        this.loadUserMovie(currentMovie.movie_id);
+      } else if (!user) {
+        this.userMovie.set(null);
+      }
+    });
+  }
+
+  loadUserMovie(movieId: number): void {
+    const user = this.currentUser();
+    if (!user) return;
+
+    this.userService
+      .getUserMovies(user.user_id)
+      .pipe(
+        catchError(() => of([] as UserMovie[])),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(list => {
+        const match = list.find(m => m.movie_id === movieId);
+        this.userMovie.set(match ?? null);
+      });
+  }
+
+  setRating(stars: number): void {
+    const user = this.currentUser();
+    const movie = this.movie();
+    if (!user || !movie) {
+      this.showAuthModal.set(true);
+      return;
+    }
+
+    const currentRating = this.userMovie()?.rating;
+    const newRating = currentRating === stars ? null : stars;
+
+    this.isSavingUserMovie.set(true);
+    this.userService
+      .updateMovieMark(user.user_id, movie.movie_id, { rating: newRating })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updated => {
+          this.userMovie.set(updated);
+          this.isSavingUserMovie.set(false);
+        },
+        error: () => {
+          this.isSavingUserMovie.set(false);
+        },
+      });
+  }
+
+  toggleFavorite(): void {
+    const user = this.currentUser();
+    const movie = this.movie();
+    if (!user || !movie) {
+      this.showAuthModal.set(true);
+      return;
+    }
+
+    const newFav = !this.userMovie()?.is_favorite;
+
+    this.isSavingUserMovie.set(true);
+    this.userService
+      .updateMovieMark(user.user_id, movie.movie_id, { is_favorite: newFav })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updated => {
+          this.userMovie.set(updated);
+          this.isSavingUserMovie.set(false);
+        },
+        error: () => {
+          this.isSavingUserMovie.set(false);
+        },
+      });
+  }
+
+  toggleWatched(): void {
+    const user = this.currentUser();
+    const movie = this.movie();
+    if (!user || !movie) {
+      this.showAuthModal.set(true);
+      return;
+    }
+
+    const newWatched = !this.userMovie()?.watched;
+
+    this.isSavingUserMovie.set(true);
+    this.userService
+      .updateMovieMark(user.user_id, movie.movie_id, { watched: newWatched })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updated => {
+          this.userMovie.set(updated);
+          this.isSavingUserMovie.set(false);
+        },
+        error: () => {
+          this.isSavingUserMovie.set(false);
+        },
+      });
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.userMovie.set(null);
   }
 
   private loadPersonPhotos(movie: MovieDetailModel): void {

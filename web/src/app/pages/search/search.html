@@ -5,9 +5,24 @@
             Movie<span>Web</span>
         </a>
 
-        <a routerLink="/search" class="search-home">
-            Inicio
-        </a>
+        <div class="header-right">
+            <a routerLink="/search" class="search-home">
+                Inicio
+            </a>
+
+            @if (currentUser(); as user) {
+            <div class="user-badge">
+                <span class="user-name">👤 {{ user.user_username }}</span>
+                <button type="button" class="logout-link" (click)="logout()">
+                    Salir
+                </button>
+            </div>
+            } @else {
+            <button type="button" class="login-header-btn" (click)="showAuthModal.set(true)">
+                Iniciar sesión
+            </button>
+            }
+        </div>
     </nav>
 
     <header class="search-header">
@@ -250,4 +265,5 @@
     </div>
     }
 
+    <app-auth-modal [(isOpen)]="showAuthModal" />
 </main>

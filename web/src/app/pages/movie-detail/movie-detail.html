@@ -6,12 +6,27 @@
                 Movie<span>Web</span>
             </a>
 
-            <nav aria-label="Navegación principal">
-                <a routerLink="/search" class="home-link">
-                    <span aria-hidden="true">⌂</span>
-                    Inicio
-                </a>
-            </nav>
+            <div class="header-right">
+                <nav aria-label="Navegación principal">
+                    <a routerLink="/search" class="home-link">
+                        <span aria-hidden="true">⌂</span>
+                        Inicio
+                    </a>
+                </nav>
+
+                @if (currentUser(); as user) {
+                <div class="user-badge">
+                    <span class="user-name">👤 {{ user.user_username }}</span>
+                    <button type="button" class="logout-link" (click)="logout()">
+                        Salir
+                    </button>
+                </div>
+                } @else {
+                <button type="button" class="login-header-btn" (click)="showAuthModal.set(true)">
+                    Iniciar sesión
+                </button>
+                }
+            </div>
         </div>
     </header>
 
@@ -82,6 +97,44 @@
                     }
                 </div>
                 }
+
+                <!-- User Interactive Voting and Favorites Panel -->
+                <div class="user-action-panel">
+                    <button type="button" class="action-toggle-btn" [class.active]="userMovie()?.is_favorite"
+                        (click)="toggleFavorite()" [disabled]="isSavingUserMovie()"
+                        [title]="userMovie()?.is_favorite ? 'Quitar de favoritos' : 'Agregar a favoritos'">
+                        <span aria-hidden="true">{{ userMovie()?.is_favorite ? '❤️' : '🤍' }}</span>
+                        <span>{{ userMovie()?.is_favorite ? 'En favoritos' : 'Favorito' }}</span>
+                    </button>
+
+                    <button type="button" class="action-toggle-btn" [class.active]="userMovie()?.watched"
+                        (click)="toggleWatched()" [disabled]="isSavingUserMovie()"
+                        [title]="userMovie()?.watched ? 'Marcar como no vista' : 'Marcar como vista'">
+                        <span aria-hidden="true">{{ userMovie()?.watched ? '✓' : '👁️' }}</span>
+                        <span>{{ userMovie()?.watched ? 'Vista' : 'Marcar vista' }}</span>
+                    </button>
+
+                    <div class="rating-widget">
+                        <span class="rating-prompt">Tu voto:</span>
+                        <div class="stars-group" (mouseleave)="hoverRating.set(null)">
+                            @for (star of [1, 2, 3, 4, 5]; track star) {
+                            <button type="button" class="star-btn"
+                                [class.filled]="(hoverRating() ?? userMovie()?.rating ?? 0) >= star"
+                                (mouseenter)="hoverRating.set(star)"
+                                (click)="setRating(star)"
+                                [attr.aria-label]="'Puntuar con ' + star + ' estrellas'">
+                                ★
+                            </button>
+                            }
+                        </div>
+                        @if (userMovie()?.rating; as currentRating) {
+                        <span class="user-rating-pill">{{ currentRating }}/5</span>
+                        <button type="button" class="clear-vote-btn" (click)="setRating(currentRating)" title="Borrar mi voto">
+                            ✕
+                        </button>
+                        }
+                    </div>
+                </div>
 
                 <h2>La historia</h2>
                 <p class="overview">
@@ -374,4 +427,6 @@
         <p class="movie-id">MovieWeb · ID {{ film.movie_id }}</p>
     </div>
     }
+
+    <app-auth-modal [(isOpen)]="showAuthModal" />
 </main>

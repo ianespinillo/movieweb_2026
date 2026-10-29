@@ -1,0 +1,99 @@
+@if (isOpen()) {
+<div class="modal-backdrop" (click)="close()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+        
+        <header class="modal-header">
+            <div class="modal-tabs">
+                <button type="button" class="tab-btn" [class.active]="mode() === 'login'" (click)="setMode('login')">
+                    Iniciar sesión
+                </button>
+                <button type="button" class="tab-btn" [class.active]="mode() === 'register'" (click)="setMode('register')">
+                    Registrarse
+                </button>
+            </div>
+
+            <button type="button" class="close-btn" aria-label="Cerrar modal" (click)="close()">
+                ✕
+            </button>
+        </header>
+
+        <div class="modal-body">
+            @if (errorMessage()) {
+            <div class="error-banner">
+                {{ errorMessage() }}
+            </div>
+            }
+
+            @if (mode() === 'login') {
+            <form (ngSubmit)="submitLogin()">
+                <div class="form-group">
+                    <label for="login-id">Usuario o Correo electrónico</label>
+                    <input id="login-id" type="text" [value]="loginIdentifier()" (input)="loginIdentifier.set($any($event.target).value)"
+                        placeholder="ej: ana_cine o ana@movieweb.test" autofocus required />
+                </div>
+
+                <div class="form-group">
+                    <label for="login-pw">Contraseña</label>
+                    <input id="login-pw" type="password" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)"
+                        placeholder="••••••••" required />
+                </div>
+
+                <button type="submit" class="primary-btn" [disabled]="isLoading()">
+                    {{ isLoading() ? 'Iniciando...' : 'Entrar a MovieWeb' }}
+                </button>
+            </form>
+
+            <div class="demo-section">
+                <span class="demo-title">Acceso rápido con usuarios de prueba:</span>
+                <div class="demo-buttons">
+                    <button type="button" class="demo-chip" (click)="loginDemoUser('ana_cine')">
+                        👤 ana_cine
+                    </button>
+                    <button type="button" class="demo-chip" (click)="loginDemoUser('bruno_m')">
+                        👤 bruno_m
+                    </button>
+                    <button type="button" class="demo-chip" (click)="loginDemoUser('carla_r')">
+                        👤 carla_r
+                    </button>
+                    <button type="button" class="demo-chip" (click)="loginDemoUser('diego_p')">
+                        👤 diego_p
+                    </button>
+                </div>
+            </div>
+
+            } @else {
+            <form (ngSubmit)="submitRegister()">
+                <div class="form-group">
+                    <label for="reg-user">Nombre de usuario</label>
+                    <input id="reg-user" type="text" [value]="regUsername()" (input)="regUsername.set($any($event.target).value)"
+                        placeholder="ej: cinemaniaco" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-name">Nombre completo (opcional)</label>
+                    <input id="reg-name" type="text" [value]="regName()" (input)="regName.set($any($event.target).value)"
+                        placeholder="ej: Juan Pérez" />
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-email">Correo electrónico</label>
+                    <input id="reg-email" type="email" [value]="regEmail()" (input)="regEmail.set($any($event.target).value)"
+                        placeholder="tu@email.com" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-pw">Contraseña</label>
+                    <input id="reg-pw" type="password" [value]="regPassword()" (input)="regPassword.set($any($event.target).value)"
+                        placeholder="••••••••" required />
+                </div>
+
+                <button type="submit" class="primary-btn" [disabled]="isLoading()">
+                    {{ isLoading() ? 'Registrando...' : 'Crear cuenta' }}
+                </button>
+            </form>
+            }
+        </div>
+
+    </div>
+</div>
+}
