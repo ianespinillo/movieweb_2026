@@ -1,3 +1,4 @@
+
 import { Routes } from '@angular/router';
 import { Search } from './pages/search/search';
 
@@ -10,6 +11,12 @@ export const routes: Routes = [
   {
     path: 'search',
     component: Search,
+  },
+  {
+    path: 'keywords',
+    loadComponent: () =>
+      import('./pages/keyword-search/keyword-search')
+        .then(m => m.KeywordSearch),
   },
   {
     path: 'movies/:id',

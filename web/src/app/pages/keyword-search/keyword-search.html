@@ -1,0 +1,198 @@
+<main class="keyword-page">
+
+    <nav class="keyword-navbar" aria-label="Navegación principal">
+        <a routerLink="/search" class="logo">
+            Movie<span>Web</span>
+        </a>
+
+        <div class="nav-links">
+            <a routerLink="/search">Inicio</a>
+            <a routerLink="/keywords" aria-current="page">
+                Keywords
+            </a>
+        </div>
+    </nav>
+
+    <header class="keyword-header">
+        <p class="eyebrow">
+            MOVIEWEB · EXPLORÁ POR TEMÁTICA
+        </p>
+
+        <h1>
+            Buscá por <span>palabras clave.</span>
+        </h1>
+
+        <p>
+            Descubrí películas relacionadas con ideas,
+            temas y conceptos.
+        </p>
+    </header>
+
+    <form class="keyword-form" (submit)="$event.preventDefault(); search()">
+        <input type="search" name="keyword" aria-label="Palabra clave"
+            placeholder="Por ejemplo: space, war, friendship..." [value]="query()"
+            (input)="query.set($any($event.target).value)" />
+
+        <button type="submit" [disabled]="!query().trim() || loading()">
+            Buscar
+        </button>
+    </form>
+
+    @if (!searched()) {
+
+    <section class="intro-panel">
+        <h2>¿Qué querés descubrir?</h2>
+
+        <p>
+            Una keyword describe un tema de la película.
+            Probá con <strong>space</strong>,
+            <strong>love</strong> o
+            <strong>revenge</strong>.
+            Las palabras clave de la base están en inglés.
+        </p>
+
+        <div class="examples">
+            <button type="button" (click)="query.set('space'); search()">
+                Space
+            </button>
+
+            <button type="button" (click)="query.set('friendship'); search()">
+                Friendship
+            </button>
+
+            <button type="button" (click)="query.set('revenge'); search()">
+                Revenge
+            </button>
+        </div>
+    </section>
+
+    } @else {
+
+    <section class="keyword-results" aria-live="polite">
+
+        <h2>
+            Resultados para
+            <span>“{{ submittedQuery() }}”</span>
+        </h2>
+
+        @if (loading()) {
+
+        <p class="status">
+            Buscando películas relacionadas...
+        </p>
+
+        } @else if (error()) {
+
+        <p class="status error">
+            No se pudo completar la búsqueda.
+            Revisá la conexión con la API e intentá nuevamente.
+        </p>
+
+        } @else if (results().length === 0) {
+
+        <p class="status">
+            No encontramos películas con esa palabra clave.
+            Probá otro término.
+        </p>
+
+        } @else {
+
+        <p class="count">
+            {{ total() }} película(s) encontrada(s)
+        </p>
+
+        <div class="movie-grid">
+
+            @for (movie of results(); track movie.movie_id) {
+
+            <a class="movie-card" [routerLink]="['/movies', movie.movie_id]">
+
+                <div class="poster">
+
+                    @if (posters()[movie.movie_id]; as poster) {
+
+                    <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" width="342" height="513" />
+
+                    } @else {
+
+                    <span>MovieWeb</span>
+
+                    }
+
+                </div>
+
+                <div class="movie-info">
+
+                    <h3>{{ movie.title }}</h3>
+
+                    <div class="meta">
+
+                        <span>
+                            {{ movie.release_date?.slice(0, 4) || 'Sin año' }}
+                        </span>
+
+                        @if (movie.vote_average !== null) {
+
+                        <span class="rating">
+                            ★ {{ movie.vote_average.toFixed(1) }}
+                        </span>
+
+                        }
+
+                    </div>
+
+                    <div class="tags">
+
+                        @for (
+                        keyword of movie.matched_keywords;
+                        track keyword
+                        ) {
+
+                        <span class="tag">
+                            {{ keyword }}
+                        </span>
+
+                        }
+
+                    </div>
+
+                </div>
+
+            </a>
+
+            }
+
+        </div>
+
+        @if (hasMore()) {
+
+        <div class="load-more">
+
+            <button type="button" [disabled]="loadingMore()" (click)="loadMore()">
+                {{
+                loadingMore()
+                ? 'Cargando...'
+                : 'Ver más películas'
+                }}
+            </button>
+
+        </div>
+
+        }
+
+        @if (moreError()) {
+
+        <p class="status error">
+            No se pudieron cargar más películas.
+            Podés volver a intentar.
+        </p>
+
+        }
+
+        }
+
+    </section>
+
+    }
+
+</main>
