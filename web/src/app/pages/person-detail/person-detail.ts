@@ -19,14 +19,12 @@ import type {
 } from '@movieweb/contracts';
 
 import { PersonService } from '../../services/person';
-import { AuthService } from '../../services/auth';
-import { AuthModal } from '../../components/auth-modal/auth-modal';
 
 type FilmographyTab = 'actor' | 'director' | 'crew';
 
 @Component({
   selector: 'app-person-detail',
-  imports: [RouterLink, AuthModal],
+  imports: [RouterLink],
   templateUrl: './person-detail.html',
   styleUrl: './person-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,7 +32,6 @@ type FilmographyTab = 'actor' | 'director' | 'crew';
 export class PersonDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly personService = inject(PersonService);
-  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly person = signal<PersonDetailModel | null>(null);
@@ -47,14 +44,6 @@ export class PersonDetail {
   readonly searchQuery = signal<string | null>(null);
   readonly activeTab = signal<FilmographyTab>('actor');
   readonly showFullBio = signal(false);
-
-  // User session
-  readonly currentUser = this.authService.currentUser;
-  readonly showAuthModal = signal(false);
-
-  logout(): void {
-    this.authService.logout();
-  }
 
   readonly moviePosters = signal<Record<number, string | null>>({});
 

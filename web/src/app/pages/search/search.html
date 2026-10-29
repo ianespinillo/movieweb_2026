@@ -1,93 +1,5 @@
 <main class="search-page">
 
-    <nav class="search-navbar" aria-label="Navegación principal">
-        <a routerLink="/search" class="search-logo">
-            Movie<span>Web</span>
-        </a>
-
-        <!-- Buscador integrado en el navbar con Autocomplete (hasta 5 items) -->
-        <div class="navbar-search-container" (click)="$event.stopPropagation()">
-            <div class="navbar-search-bar" [class.focused]="isInputFocused()">
-                <span class="search-icon" aria-hidden="true">🔍</span>
-
-                <input
-                    type="search"
-                    class="navbar-search-input"
-                    placeholder="Buscar películas, personas o keywords..."
-                    aria-label="Buscar películas, personas o palabras clave"
-                    [value]="searchQuery()"
-                    (input)="onSearchInput($any($event.target).value)"
-                    (focus)="onInputFocus()"
-                    (blur)="onInputBlur()"
-                    (keydown)="onKeydown($event)"
-                />
-
-                @if (searchQuery()) {
-                <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Borrar búsqueda">
-                    ✕
-                </button>
-                }
-
-                <button type="button" class="navbar-search-btn" (click)="search()" aria-label="Ejecutar búsqueda">
-                    Buscar
-                </button>
-            </div>
-
-            <!-- Menú desplegable de Autocomplete (máx 5 sugerencias) -->
-            @if (showAutocomplete() && autocompleteSuggestions().length > 0) {
-            <div class="autocomplete-dropdown" role="listbox">
-                <div class="autocomplete-header">
-                    <span>Sugerencias rápidas</span>
-                    <span class="autocomplete-count">{{ autocompleteSuggestions().length }} de 5</span>
-                </div>
-
-                <ul class="autocomplete-list">
-                    @for (item of autocompleteSuggestions(); track item.id; let i = $index) {
-                    <li
-                        class="autocomplete-item"
-                        [class.highlighted]="i === activeSuggestionIndex()"
-                        role="option"
-                        [attr.aria-selected]="i === activeSuggestionIndex()"
-                        (mousedown)="selectSuggestion(item, $event)"
-                        (mouseenter)="activeSuggestionIndex.set(i)"
-                    >
-                        <span class="item-icon">{{ item.icon }}</span>
-
-                        <div class="item-info">
-                            <span class="item-title">{{ item.title }}</span>
-                            <span class="item-subtitle">{{ item.subtitle }}</span>
-                        </div>
-
-                        <span class="item-badge" [class]="'badge-' + item.type">
-                            {{ item.typeLabel }}
-                        </span>
-                    </li>
-                    }
-                </ul>
-            </div>
-            }
-        </div>
-
-        <div class="header-right">
-            <a routerLink="/search" class="search-home">
-                Inicio
-            </a>
-
-            @if (currentUser(); as user) {
-            <div class="user-badge">
-                <span class="user-name">👤 {{ user.user_username }}</span>
-                <button type="button" class="logout-link" (click)="logout()">
-                    Salir
-                </button>
-            </div>
-            } @else {
-            <button type="button" class="login-header-btn" (click)="showAuthModal.set(true)">
-                Iniciar sesión
-            </button>
-            }
-        </div>
-    </nav>
-
     @if (!hasSearched()) {
 
     <header class="search-header">
@@ -434,5 +346,4 @@
     </div>
     }
 
-    <app-auth-modal [(isOpen)]="showAuthModal" />
 </main>

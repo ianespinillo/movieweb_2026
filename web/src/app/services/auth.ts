@@ -17,6 +17,15 @@ export class AuthService {
 
   readonly currentUser = signal<AuthUser | null>(this.readStoredUser());
   readonly isAuthenticated = computed(() => !!this.currentUser());
+  readonly showModal = signal(false);
+
+  openModal(): void {
+    this.showModal.set(true);
+  }
+
+  closeModal(): void {
+    this.showModal.set(false);
+  }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -29,6 +38,7 @@ export class AuthService {
         unwrap(),
         tap(response => {
           this.setSession(response);
+          this.closeModal();
         })
       );
   }
@@ -40,6 +50,7 @@ export class AuthService {
         unwrap(),
         tap(response => {
           this.setSession(response);
+          this.closeModal();
         })
       );
   }

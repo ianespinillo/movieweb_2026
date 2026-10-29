@@ -1,35 +1,5 @@
 <main class="movie-page">
 
-    <header class="site-header">
-        <div class="site-header-inner">
-            <a routerLink="/search" class="site-logo">
-                Movie<span>Web</span>
-            </a>
-
-            <div class="header-right">
-                <nav aria-label="Navegación principal">
-                    <a routerLink="/search" class="home-link">
-                        <span aria-hidden="true">⌂</span>
-                        Inicio
-                    </a>
-                </nav>
-
-                @if (currentUser(); as user) {
-                <div class="user-badge">
-                    <span class="user-name">👤 {{ user.user_username }}</span>
-                    <button type="button" class="logout-link" (click)="logout()">
-                        Salir
-                    </button>
-                </div>
-                } @else {
-                <button type="button" class="login-header-btn" (click)="showAuthModal.set(true)">
-                    Iniciar sesión
-                </button>
-                }
-            </div>
-        </div>
-    </header>
-
     <div class="top-navigation">
         <a routerLink="/search" [queryParams]="searchQuery() ? { q: searchQuery() } : {}" class="back-link">
             <span aria-hidden="true">←</span>
@@ -427,6 +397,4 @@
         <p class="movie-id">MovieWeb · ID {{ film.movie_id }}</p>
     </div>
     }
-
-    <app-auth-modal [(isOpen)]="showAuthModal" />
 </main>

@@ -35,7 +35,6 @@ import { Movie as MovieService } from '../../services/movie';
 import { AuthService } from '../../services/auth';
 import { UserService } from '../../services/user';
 import { TMDB_ROUTES } from '../../services/api-routes';
-import { AuthModal } from '../../components/auth-modal/auth-modal';
 
 interface ApiResponse<T> {
   success: true;
@@ -45,7 +44,7 @@ interface ApiResponse<T> {
 
 @Component({
   selector: 'app-movie-detail',
-  imports: [RouterLink, AuthModal],
+  imports: [RouterLink],
   templateUrl: './movie-detail.html',
   styleUrl: './movie-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,7 +75,6 @@ export class MovieDetail {
 
   // User session and interactions
   readonly currentUser = this.authService.currentUser;
-  readonly showAuthModal = signal(false);
   readonly userMovie = signal<UserMovie | null>(null);
   readonly isSavingUserMovie = signal(false);
   readonly hoverRating = signal<number | null>(null);
@@ -224,7 +222,7 @@ export class MovieDetail {
     const user = this.currentUser();
     const movie = this.movie();
     if (!user || !movie) {
-      this.showAuthModal.set(true);
+      this.authService.openModal();
       return;
     }
 
@@ -250,7 +248,7 @@ export class MovieDetail {
     const user = this.currentUser();
     const movie = this.movie();
     if (!user || !movie) {
-      this.showAuthModal.set(true);
+      this.authService.openModal();
       return;
     }
 
@@ -275,7 +273,7 @@ export class MovieDetail {
     const user = this.currentUser();
     const movie = this.movie();
     if (!user || !movie) {
-      this.showAuthModal.set(true);
+      this.authService.openModal();
       return;
     }
 
@@ -294,11 +292,6 @@ export class MovieDetail {
           this.isSavingUserMovie.set(false);
         },
       });
-  }
-
-  logout(): void {
-    this.authService.logout();
-    this.userMovie.set(null);
   }
 
   private loadPersonPhotos(movie: MovieDetailModel): void {

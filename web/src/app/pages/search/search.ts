@@ -17,9 +17,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Subject,
   catchError,
-  debounceTime,
-  distinctUntilChanged,
-  finalize,
   forkJoin,
   from,
   map,
@@ -29,7 +26,7 @@ import {
   tap,
 } from 'rxjs';
 
-import type { Keyword, KeywordMovie, TmdbPersonMeta } from '@movieweb/contracts';
+import type { KeywordMovie, TmdbPersonMeta } from '@movieweb/contracts';
 
 import { Movie } from '../../models/movie.model';
 import { Person } from '../../models/person.model';
@@ -47,8 +44,6 @@ import {
 
 import { TMDB_ROUTES } from '../../services/api-routes';
 import { SearchState } from '../../services/search-state';
-import { AuthService } from '../../services/auth';
-import { AuthModal } from '../../components/auth-modal/auth-modal';
 
 interface ApiResponse<T> {
   success: true;
@@ -56,20 +51,9 @@ interface ApiResponse<T> {
   timestamp: string;
 }
 
-export interface AutocompleteSuggestion {
-  id: string | number;
-  title: string;
-  subtitle: string;
-  type: 'movie' | 'person' | 'keyword';
-  typeLabel: string;
-  icon: string;
-  route?: (string | number)[];
-  keyword?: string;
-}
-
 @Component({
   selector: 'app-search',
-  imports: [RouterLink, AuthModal],
+  imports: [RouterLink],
   templateUrl: './search.html',
   styleUrl: './search.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,17 +61,8 @@ export interface AutocompleteSuggestion {
 export class Search {
   private readonly movieService = inject(MovieService);
   private readonly personService = inject(PersonService);
-  private readonly authService = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
-
-  readonly currentUser = this.authService.currentUser;
-  readonly showAuthModal = signal(false);
-
-  logout(): void {
-    this.authService.logout();
-  }
-
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly searchState = inject(SearchState);
@@ -96,7 +71,6 @@ export class Search {
   private readonly searchRequests = new Subject<string>();
   private searchVersion = 0;
 
-  readonly searchQuery = signal('');
   readonly submittedQuery = signal('');
   readonly hasSearched = signal(false);
   readonly isLoading = signal(false);
@@ -133,14 +107,6 @@ export class Search {
   readonly suggestedMovies = signal<Movie[]>([]);
   readonly loadingSuggestions = signal(true);
 
-  // Autocomplete
-  private readonly autocompleteSubject = new Subject<string>();
-  readonly autocompleteSuggestions = signal<AutocompleteSuggestion[]>([]);
-  readonly isAutocompleteLoading = signal(false);
-  readonly showAutocomplete = signal(false);
-  readonly activeSuggestionIndex = signal(-1);
-  readonly isInputFocused = signal(false);
-
   // Películas destacadas para la portada
   private readonly suggestedIds = [
     155,
@@ -151,7 +117,6 @@ export class Search {
 
   constructor() {
     this.loadSuggestions();
-    this.initAutocomplete();
 
     // Búsqueda normal
     this.searchRequests.pipe(
@@ -272,7 +237,6 @@ export class Search {
         const query = params.get('q')?.trim() ?? '';
 
         if (!query) {
-          this.searchQuery.set('');
           this.submittedQuery.set('');
           this.hasSearched.set(false);
           this.isLoading.set(false);
@@ -286,103 +250,14 @@ export class Search {
           return;
         }
 
-        this.searchQuery.set(query);
         this.searchRequests.next(query);
       });
-  }
-
-  private initAutocomplete(): void {
-    this.autocompleteSubject.pipe(
-      debounceTime(250),
-      distinctUntilChanged(),
-      switchMap(term => {
-        const trimmed = term.trim();
-        if (!trimmed || trimmed.length < 2) {
-          return of<AutocompleteSuggestion[]>([]);
-        }
-
-        this.isAutocompleteLoading.set(true);
-
-        return forkJoin({
-          movies: this.movieService.searchMovies(trimmed, 1, 5).pipe(
-            map(res => res.items),
-            catchError(() => of([] as Movie[]))
-          ),
-          people: this.personService.searchPeople(trimmed, 1, 3).pipe(
-            map(res => res.items),
-            catchError(() => of([] as Person[]))
-          ),
-          keywords: this.movieService.suggestKeywords(trimmed, 3).pipe(
-            catchError(() => of([] as Keyword[]))
-          ),
-        }).pipe(
-          map(({ movies, people, keywords }) => {
-            const list: AutocompleteSuggestion[] = [];
-
-            // 1. Películas sugeridas
-            for (const m of movies) {
-              const year = m.release_date ? m.release_date.slice(0, 4) : '';
-              list.push({
-                id: `m_${m.movie_id}`,
-                title: m.title,
-                subtitle: year ? `${year} • Película` : 'Película',
-                type: 'movie',
-                typeLabel: 'Película',
-                icon: '🎬',
-                route: ['/movies', m.movie_id],
-              });
-            }
-
-            // 2. Personas sugeridas (actores / directores)
-            for (const p of people) {
-              const role = p.is_director && p.is_actor
-                ? 'Director / Actor'
-                : p.is_director
-                ? 'Director'
-                : 'Actor';
-              list.push({
-                id: `p_${p.person_id}`,
-                title: p.person_name,
-                subtitle: role,
-                type: 'person',
-                typeLabel: role,
-                icon: '👤',
-                route: ['/people', p.person_id],
-              });
-            }
-
-            // 3. Palabras clave sugeridas
-            for (const k of keywords) {
-              list.push({
-                id: `k_${k.keyword_id}`,
-                title: k.keyword_name,
-                subtitle: 'Palabra clave',
-                type: 'keyword',
-                typeLabel: 'Keyword',
-                icon: '🏷️',
-                keyword: k.keyword_name,
-              });
-            }
-
-            // Máximo 5 sugerencias
-            return list.slice(0, 5);
-          }),
-          finalize(() => this.isAutocompleteLoading.set(false))
-        );
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe(suggestions => {
-      this.autocompleteSuggestions.set(suggestions);
-      this.showAutocomplete.set(suggestions.length > 0 && this.isInputFocused());
-      this.activeSuggestionIndex.set(-1);
-    });
   }
 
   // Restaurar resultados y paginación
   private restoreSearch(saved: import(
     '../../services/search-state'
   ).SavedSearch): void {
-    this.searchQuery.set(saved.query);
     this.submittedQuery.set(saved.query);
 
     this.movies.set([...saved.movies]);
@@ -579,106 +454,13 @@ export class Search {
     ]);
   }
 
-  // Interacción de búsqueda y autocomplete
-  onSearchInput(value: string): void {
-    this.searchQuery.set(value);
-    this.autocompleteSubject.next(value);
-  }
-
-  onInputFocus(): void {
-    this.isInputFocused.set(true);
-    if (this.autocompleteSuggestions().length > 0) {
-      this.showAutocomplete.set(true);
-    }
-  }
-
-  onInputBlur(): void {
-    // Breve espera para permitir click en las sugerencias
-    setTimeout(() => {
-      this.isInputFocused.set(false);
-      this.showAutocomplete.set(false);
-    }, 220);
-  }
-
-  onKeydown(event: KeyboardEvent): void {
-    const suggestions = this.autocompleteSuggestions();
-    const isDropdownVisible = this.showAutocomplete() && suggestions.length > 0;
-
-    if (event.key === 'ArrowDown') {
-      if (!isDropdownVisible) return;
-      event.preventDefault();
-      const nextIndex = (this.activeSuggestionIndex() + 1) % suggestions.length;
-      this.activeSuggestionIndex.set(nextIndex);
-    } else if (event.key === 'ArrowUp') {
-      if (!isDropdownVisible) return;
-      event.preventDefault();
-      const prevIndex = (this.activeSuggestionIndex() - 1 + suggestions.length) % suggestions.length;
-      this.activeSuggestionIndex.set(prevIndex);
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      const activeIdx = this.activeSuggestionIndex();
-      if (isDropdownVisible && activeIdx >= 0 && activeIdx < suggestions.length) {
-        this.selectSuggestion(suggestions[activeIdx]);
-      } else {
-        this.search();
-      }
-    } else if (event.key === 'Escape') {
-      this.showAutocomplete.set(false);
-      this.activeSuggestionIndex.set(-1);
-    }
-  }
-
-  selectSuggestion(item: AutocompleteSuggestion, event?: Event): void {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    this.showAutocomplete.set(false);
-
-    if (item.type === 'movie' || item.type === 'person') {
-      if (item.route) {
-        this.saveSearch();
-        this.router.navigate(item.route);
-      }
-    } else if (item.type === 'keyword') {
-      const kw = item.keyword || item.title;
-      this.searchKeyword(kw);
-    }
-  }
-
   searchKeyword(keyword: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.searchQuery.set(keyword);
-    this.showAutocomplete.set(false);
-    this.search();
-  }
-
-  clearSearch(): void {
-    this.searchQuery.set('');
-    this.autocompleteSuggestions.set([]);
-    this.showAutocomplete.set(false);
-    this.activeSuggestionIndex.set(-1);
-  }
-
-  // Ejecutar búsqueda
-  search(): void {
-    const query = this.searchQuery().trim();
-    this.showAutocomplete.set(false);
-
-    if (!query) return;
-
-    this.searchState.clear();
-
-    if (this.route.snapshot.queryParamMap.get('q') === query) {
-      this.searchRequests.next(query);
-      return;
-    }
-
     this.router.navigate(['/search'], {
-      queryParams: { q: query },
+      queryParams: { q: keyword },
     });
   }
 
