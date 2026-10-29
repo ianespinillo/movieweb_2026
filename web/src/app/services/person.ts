@@ -1,9 +1,11 @@
-
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
+import type { ApiResponse, PersonDetail, TmdbPersonMeta, TmdbMovieMeta } from '@movieweb/contracts';
 import { Person } from '../models/person.model';
+import { PEOPLE_ROUTES, TMDB_ROUTES } from './api-routes';
+import { unwrap } from './api-response';
 
 export interface PeopleSearchPage {
   items: Person[];
@@ -23,11 +25,11 @@ interface PeopleSearchResponse {
   providedIn: 'root',
 })
 export class PersonService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   searchPeople(query: string, page = 1) {
     return this.http.get<PeopleSearchResponse>(
-      'http://localhost:3500/api/people/search',
+      PEOPLE_ROUTES.search,
       {
         params: {
           q: query,
@@ -38,5 +40,23 @@ export class PersonService {
     ).pipe(
       map(response => response.data)
     );
+  }
+
+  getPersonById(id: string | number): Observable<PersonDetail> {
+    return this.http
+      .get<ApiResponse<PersonDetail>>(PEOPLE_ROUTES.detail(id))
+      .pipe(unwrap());
+  }
+
+  getTmdbPerson(id: string | number): Observable<TmdbPersonMeta> {
+    return this.http
+      .get<ApiResponse<TmdbPersonMeta>>(TMDB_ROUTES.person(id))
+      .pipe(unwrap());
+  }
+
+  getTmdbMovie(id: string | number): Observable<TmdbMovieMeta> {
+    return this.http
+      .get<ApiResponse<TmdbMovieMeta>>(TMDB_ROUTES.movie(id))
+      .pipe(unwrap());
   }
 }

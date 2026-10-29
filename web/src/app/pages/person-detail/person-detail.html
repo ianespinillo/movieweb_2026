@@ -1,7 +1,182 @@
-<main>
-    <a routerLink="/search">← Volver al buscador</a>
+<main class="person-page">
 
-    <h1>Perfil de persona</h1>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a routerLink="/search" class="site-logo">
+                Movie<span>Web</span>
+            </a>
 
-    <p>ID de la persona: {{ personId }}</p>
+            <nav aria-label="Navegación principal">
+                <a routerLink="/search" class="home-link">
+                    <span aria-hidden="true">⌂</span>
+                    Inicio
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="top-navigation">
+        <a routerLink="/search" [queryParams]="searchQuery() ? { q: searchQuery() } : {}" class="back-link">
+            <span aria-hidden="true">←</span>
+            {{ searchQuery() ? 'Volver a resultados' : 'Volver al buscador' }}
+        </a>
+    </div>
+
+    @if (isLoading()) {
+    <div class="status-message">
+        <h2>Cargando persona...</h2>
+        <p>Recuperando filmografía y detalles.</p>
+    </div>
+    } @else if (hasError()) {
+    <div class="status-message error-message">
+        <h2>No se pudo cargar la persona</h2>
+        <p>No encontramos a la persona o hubo un error de conexión.</p>
+        <a routerLink="/search">Volver al inicio</a>
+    </div>
+    } @else if (person(); as p) {
+
+    <section class="person-hero">
+        <div class="hero-content">
+            <div class="avatar-container">
+                @if (profileUrl(); as avatar) {
+                <img class="person-avatar" [src]="avatar" [alt]="'Foto de ' + p.person_name" width="280" height="420" fetchpriority="high" />
+                } @else {
+                <div class="avatar-placeholder">
+                    <span class="placeholder-icon" aria-hidden="true">👤</span>
+                    <p>Foto no disponible</p>
+                </div>
+                }
+            </div>
+
+            <div class="hero-info">
+                <span class="hero-eyebrow">MOVIEWEB · PERSONA</span>
+
+                <h1>{{ p.person_name }}</h1>
+
+                <div class="role-badges">
+                    @for (role of roles(); track role) {
+                    <span class="badge" [class.badge-accent]="role === 'Director' || role === 'Actor'">
+                        {{ role }}
+                    </span>
+                    }
+                </div>
+
+                <div class="person-meta">
+                    @if (tmdb()?.birthday; as bday) {
+                    <div class="meta-item">
+                        <span class="meta-label">Nacimiento</span>
+                        <span class="meta-value">{{ formatDate(bday) }}</span>
+                    </div>
+                    }
+
+                    @if (tmdb()?.place_of_birth; as place) {
+                    <div class="meta-item">
+                        <span class="meta-label">Lugar de origen</span>
+                        <span class="meta-value">{{ place }}</span>
+                    </div>
+                    }
+
+                    <div class="meta-item">
+                        <span class="meta-label">Participaciones</span>
+                        <span class="meta-value">{{ totalCredits() }} títulos</span>
+                    </div>
+                </div>
+
+                @if (tmdb()?.biography; as bio) {
+                <div class="biography-block">
+                    <h2>Biografía</h2>
+                    <p class="biography-text" [class.collapsed]="!showFullBio() && bio.length > 400">
+                        {{ bio }}
+                    </p>
+                    @if (bio.length > 400) {
+                    <button type="button" class="bio-toggle" (click)="toggleBio()">
+                        {{ showFullBio() ? 'Leer menos ▲' : 'Leer más ▼' }}
+                    </button>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="person-content">
+
+        <section class="filmography-section">
+            <div class="section-header">
+                <h2>Filmografía</h2>
+                
+                <div class="tab-buttons" role="tablist">
+                    @if (p.as_actor.length > 0) {
+                    <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'actor'"
+                        class="tab-btn" [class.active]="activeTab() === 'actor'" (click)="setTab('actor')">
+                        Como Actor ({{ p.as_actor.length }})
+                    </button>
+                    }
+
+                    @if (p.as_director.length > 0) {
+                    <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'director'"
+                        class="tab-btn" [class.active]="activeTab() === 'director'" (click)="setTab('director')">
+                        Como Director ({{ p.as_director.length }})
+                    </button>
+                    }
+
+                    @if (p.as_crew.length > 0) {
+                    <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'crew'"
+                        class="tab-btn" [class.active]="activeTab() === 'crew'" (click)="setTab('crew')">
+                        Equipo Técnico ({{ p.as_crew.length }})
+                    </button>
+                    }
+                </div>
+            </div>
+
+            @if (activeCredits().length === 0) {
+            <p class="empty-credits">No hay títulos registrados en esta categoría.</p>
+            } @else {
+            <div class="filmography-grid">
+                @for (credit of activeCredits(); track credit.movie_id) {
+                <a class="movie-card" [routerLink]="['/movies', credit.movie_id]" [queryParams]="searchQuery() ? { q: searchQuery() } : {}">
+                    <div class="card-poster">
+                        @if (moviePosters()[credit.movie_id]; as poster) {
+                        <img [src]="poster" [alt]="'Póster de ' + credit.title" loading="lazy" width="220" height="330" />
+                        } @else {
+                        <div class="card-poster-placeholder">
+                            <span>MovieWeb</span>
+                        </div>
+                        }
+
+                        @if (credit.vote_average !== null) {
+                        <span class="card-rating">
+                            ★ {{ credit.vote_average.toFixed(1) }}
+                        </span>
+                        }
+                    </div>
+
+                    <div class="card-info">
+                        <span class="card-year">{{ getYear(credit.release_date) }}</span>
+                        <h3 class="card-title">{{ credit.title }}</h3>
+
+                        @if (activeTab() === 'actor') {
+                        <p class="card-role">
+                            <span class="role-label">Papel:</span> {{ getActorRole(credit) }}
+                        </p>
+                        } @else if (activeTab() === 'director') {
+                        <p class="card-role">
+                            <span class="role-tag">Director</span>
+                        </p>
+                        } @else {
+                        <p class="card-role">
+                            {{ getCrewRole(credit) }}
+                        </p>
+                        }
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+
+    </div>
+
+    }
+
 </main>
