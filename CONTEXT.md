@@ -216,24 +216,31 @@ Port of shadcn/ui for Angular. Uses TailwindCSS v4. Components installed via `np
 - `language` / `movie_languages` / `language_role` — languages (`language.language_code`, role Original/Spoken)
 - `production_company` / `movie_company` — companies
 
-**New tables to create (migration in `db/`):**
+**New tables (`db/13_users.sql`; drop with `db/drop_tp_tables.sql`; test data in `db/15_seed_users.sql`):**
 ```sql
 -- Schema: movies
 CREATE TABLE users (
-  user_id      SERIAL PRIMARY KEY,
-  user_username VARCHAR(50)  UNIQUE NOT NULL,
+  user_id       SERIAL       PRIMARY KEY,
+  user_username VARCHAR(50)  NOT NULL UNIQUE,
   user_name     VARCHAR(100),
-  user_email    VARCHAR(150) UNIQUE NOT NULL
+  user_email    VARCHAR(150) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE movie_user (
-  user_id   INT REFERENCES users(user_id)  ON DELETE CASCADE,
-  movie_id  INT REFERENCES movie(movie_id) ON DELETE CASCADE,
-  rating    NUMERIC(3,1) CHECK (rating >= 0 AND rating <= 10),
-  review    TEXT,
-  PRIMARY KEY (user_id, movie_id)
+-- One row per user and movie. Reviews are NOT here: they live in MongoDB (PDF 3.2).
+CREATE TABLE user_movies (
+  user_id     INT NOT NULL REFERENCES users (user_id)  ON DELETE CASCADE,
+  movie_id    INT NOT NULL REFERENCES movie (movie_id) ON DELETE CASCADE,
+  is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
+  watched     BOOLEAN NOT NULL DEFAULT FALSE,
+  rating      SMALLINT CHECK (rating BETWEEN 1 AND 5),   -- stars, NULL = not rated
+  added_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, movie_id),
+  CHECK (is_favorite OR watched OR rating IS NOT NULL)   -- no empty rows: unmark all = delete
 );
 ```
+Seed users: `ana_cine`, `bruno_m`, `carla_r`, `diego_p`, all with password `movieweb2026`.
 
 ## Database — MongoDB Collection `user_activity`
 

@@ -189,6 +189,9 @@ function Invoke-Reset {
         Say 'Cargando 14_people_indexes.sql...' 'Cyan'
         & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '14_people_indexes.sql'
         if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 14_people_indexes.sql.' 'Mirá el error de arriba.' }
+        Say 'Cargando 15_seed_users.sql (usuarios de prueba)...' 'Cyan'
+        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '15_seed_users.sql'
+        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 15_seed_users.sql.' 'Mirá el error de arriba.' }
     } finally {
         Pop-Location
         Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
