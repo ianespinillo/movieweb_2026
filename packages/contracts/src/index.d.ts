@@ -11,3 +11,4 @@ export * from './people';
 export * from './users';
 export * from './auth';
 export * from './tmdb';
+export * from './activity';

@@ -15,6 +15,7 @@ import {
   UserMovieKey,
   UserMovieRequest,
 } from '../types/index.js';
+import { Activity } from './activity.js';
 
 const router = Router();
 
@@ -170,8 +171,12 @@ router.delete('/:id', authenticate, asyncHandler(async (req: Request, res: Respo
   );
   if (result.rows.length === 0) throw notFound('User not found');
 
-  // Pending: also delete the user's activity and reviews in MongoDB once the
-  // activity and review models are exported (api/src/models).
+  // Also remove user activity from MongoDB
+  try {
+    await Activity.deleteMany({ userId: String(userId) });
+  } catch (mongoErr) {
+    console.error('Error removing user activity from Mongo:', mongoErr);
+  }
 
   ok(res, result.rows[0]);
 }));
@@ -276,11 +281,40 @@ router.put('/:id/movies/:movieId', authenticate, asyncHandler(async (req: Reques
         [userId, movieId, after.is_favorite, after.watched, after.rating]
       );
 
-      // Pending: record the timeline events in MongoDB once the activity model is
-      // exported: ADDED_TO_FAVORITES when is_favorite goes from false to true, and
-      // RATED_MOVIE when rating changes to a value (compare `before` and `after`).
+      const savedMovie = result.rows[0];
 
-      return result.rows[0];
+      // Auto-record timeline events in MongoDB (PDF requirement)
+      if (savedMovie) {
+        try {
+          if (!before.is_favorite && after.is_favorite) {
+            await Activity.create({
+              userId: String(userId),
+              type: 'ADDED_TO_FAVORITES',
+              timestamp: new Date(),
+              details: {
+                movieId: savedMovie.movie_id,
+                movieTitle: savedMovie.title,
+              },
+            });
+          }
+          if (after.rating !== null && after.rating !== before.rating) {
+            await Activity.create({
+              userId: String(userId),
+              type: 'RATED_MOVIE',
+              timestamp: new Date(),
+              details: {
+                movieId: savedMovie.movie_id,
+                movieTitle: savedMovie.title,
+                rating: after.rating,
+              },
+            });
+          }
+        } catch (mongoErr) {
+          console.error('Error logging activity to Mongo:', mongoErr);
+        }
+      }
+
+      return savedMovie;
     });
   } catch (err) {
     // The user comes from a valid token, so a missing row here is the movie

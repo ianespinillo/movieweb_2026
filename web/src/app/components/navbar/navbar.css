@@ -287,6 +287,35 @@
     background: #1b3447;
 }
 
+.nav-panel-link {
+    padding: 8px 16px;
+    border: 1px solid rgba(94, 230, 255, 0.3);
+    border-radius: 11px;
+    background: rgba(94, 230, 255, 0.08);
+    color: #5ee6ff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.nav-panel-link:hover {
+    background: rgba(94, 230, 255, 0.18);
+    border-color: #5ee6ff;
+}
+
+.user-name-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2eef7;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.user-name-link:hover {
+    color: #5ee6ff;
+}
+
 .login-header-btn {
     padding: 8px 16px;
     background: rgba(94, 230, 255, .1);

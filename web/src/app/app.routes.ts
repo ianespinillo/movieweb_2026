@@ -23,4 +23,14 @@ export const routes: Routes = [
       import('./pages/person-detail/person-detail')
         .then(m => m.PersonDetail),
   },
+  {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./pages/dashboard/dashboard')
+        .then(m => m.Dashboard),
+  },
+  {
+    path: 'profile',
+    redirectTo: 'dashboard',
+  },
 ];

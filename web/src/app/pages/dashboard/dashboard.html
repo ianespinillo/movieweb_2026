@@ -1,0 +1,331 @@
+<main class="dashboard-page">
+
+    @if (!currentUser()) {
+    <div class="auth-gate-card">
+        <span class="gate-icon">🔐</span>
+        <h2>Panel de Usuario</h2>
+        <p>Iniciá sesión para acceder a tu historial de acciones, tus películas favoritas y tus calificaciones personales.</p>
+        <button type="button" class="btn-primary" (click)="openLoginModal()">
+            Iniciar sesión
+        </button>
+    </div>
+    } @else {
+
+    <!-- Encabezado de perfil -->
+    <header class="dashboard-header">
+        <div class="user-avatar-circle">
+            {{ currentUser()?.user_username?.charAt(0)?.toUpperCase() || 'U' }}
+        </div>
+
+        <div class="user-info">
+            <div class="user-names-row">
+                <h1>{{ currentUser()?.user_name || currentUser()?.user_username }}</h1>
+                <span class="username-tag">&#64;{{ currentUser()?.user_username }}</span>
+            </div>
+            <p class="user-email">{{ currentUser()?.user_email }}</p>
+
+            <div class="user-stats-bar">
+                <span class="stat-pill">
+                    ❤️ <strong>{{ favoriteMovies().length }}</strong> Likeadas
+                </span>
+                <span class="stat-pill">
+                    ⭐ <strong>{{ ratedMovies().length }}</strong> Calificadas
+                </span>
+                <span class="stat-pill">
+                    ⏱️ <strong>{{ timeline().length }}</strong> Acciones registradas
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Selector de Pestañas -->
+    <nav class="dashboard-tabs" aria-label="Secciones del panel">
+        <button
+            type="button"
+            class="tab-button"
+            [class.active]="activeTab() === 'timeline'"
+            (click)="activeTab.set('timeline')"
+        >
+            <span class="tab-icon">⏱️</span>
+            Historial de Acciones
+            <span class="tab-badge">{{ timeline().length }}</span>
+        </button>
+
+        <button
+            type="button"
+            class="tab-button"
+            [class.active]="activeTab() === 'favorites'"
+            (click)="activeTab.set('favorites')"
+        >
+            <span class="tab-icon">❤️</span>
+            Películas Likeadas
+            <span class="tab-badge">{{ favoriteMovies().length }}</span>
+        </button>
+
+        <button
+            type="button"
+            class="tab-button"
+            [class.active]="activeTab() === 'rated'"
+            (click)="activeTab.set('rated')"
+        >
+            <span class="tab-icon">⭐</span>
+            Películas Calificadas
+            <span class="tab-badge">{{ ratedMovies().length }}</span>
+        </button>
+    </nav>
+
+    @if (isLoading()) {
+    <div class="status-card">
+        <p>Cargando información de tu panel...</p>
+    </div>
+    } @else if (hasError()) {
+    <div class="status-card error-card">
+        <p>No se pudo cargar la información del panel. Verificá la conexión e intentalo de nuevo.</p>
+    </div>
+    } @else {
+
+    <!-- Pestaña 1: Timeline de Historial de Acciones (MongoDB) -->
+    @if (activeTab() === 'timeline') {
+    <section class="tab-content timeline-section">
+        <div class="section-heading">
+            <div>
+                <h2>Historial de Acciones</h2>
+                <p class="section-subtext">Eventos registrados en MongoDB (calificaciones, likes a favoritos y reseñas).</p>
+            </div>
+            <span class="collection-tag">MongoDB · user_activity</span>
+        </div>
+
+        @if (timeline().length === 0) {
+        <div class="empty-tab-state">
+            <span class="empty-icon">⏱️</span>
+            <h3>Sin actividad registrada</h3>
+            <p>Todavía no tenés acciones en tu historial. Empezá explorando películas y calificándolas.</p>
+            <a routerLink="/search" class="btn-secondary">Explorar películas</a>
+        </div>
+        } @else {
+        <div class="timeline-container">
+            @for (event of timeline(); track event._id) {
+            <div class="timeline-entry">
+                <div class="timeline-marker">
+                    <span class="marker-icon">{{ getEventIcon(event.type) }}</span>
+                </div>
+
+                <div class="timeline-card">
+                    <div class="card-top-row">
+                        <span class="event-badge" [class]="getEventBadgeClass(event.type)">
+                            {{ getEventActionLabel(event) }}
+                        </span>
+                        <time class="event-time">{{ event.timestamp | date:'d MMM y, HH:mm' }}</time>
+                    </div>
+
+                    <div class="card-main-body">
+                        @if (event.details.movieId) {
+                        <a [routerLink]="['/movies', event.details.movieId]" class="movie-link">
+                            🎬 <strong>{{ event.details.movieTitle || 'Película #' + event.details.movieId }}</strong>
+                        </a>
+                        }
+
+                        @if (event.type === 'RATED_MOVIE' && event.details.rating) {
+                        <div class="rating-display">
+                            <span class="stars">
+                                @for (s of [1,2,3,4,5]; track s) {
+                                    <span [class.active-star]="s <= (event.details.rating || 0)">★</span>
+                                }
+                            </span>
+                            <span class="rating-num">{{ event.details.rating }}/5 estrellas</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Pestaña 2: Películas Likeadas (Favoritas) -->
+    @if (activeTab() === 'favorites') {
+    <section class="tab-content movies-section">
+        <div class="section-heading-with-sort">
+            <div>
+                <h2>Películas Likeadas</h2>
+                <p class="section-subtext">{{ favoriteMovies().length }} películas marcadas como favoritas.</p>
+            </div>
+
+            <!-- Toolbar de ordenamiento -->
+            <div class="sort-toolbar">
+                <span class="sort-label">Ordenar por:</span>
+
+                <div class="sort-btn-group">
+                    <button
+                        type="button"
+                        class="sort-chip"
+                        [class.active]="sortField() === 'date'"
+                        (click)="setSortField('date')"
+                    >
+                        📅 Fecha de calif
+                    </button>
+                    <button
+                        type="button"
+                        class="sort-chip"
+                        [class.active]="sortField() === 'vote_average'"
+                        (click)="setSortField('vote_average')"
+                    >
+                        ★ Vote Avg
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    class="order-toggle-btn"
+                    (click)="toggleSortOrder()"
+                    [title]="sortOrder() === 'desc' ? 'Orden descendente' : 'Orden ascendente'"
+                >
+                    {{ sortOrder() === 'desc' ? '↓ Mayor a menor' : '↑ Menor a mayor' }}
+                </button>
+            </div>
+        </div>
+
+        @if (favoriteMovies().length === 0) {
+        <div class="empty-tab-state">
+            <span class="empty-icon">💔</span>
+            <h3>Sin películas likeadas</h3>
+            <p>Aún no agregaste películas a tus favoritos. Buscá películas y hacé clic en el corazón para guardarlas.</p>
+            <a routerLink="/search" class="btn-secondary">Buscar películas</a>
+        </div>
+        } @else {
+        <div class="poster-grid">
+            @for (movie of sortedFavorites(); track movie.movie_id) {
+            <a class="poster-card" [routerLink]="['/movies', movie.movie_id]">
+                <div class="poster-image">
+                    @if (posters()[movie.movie_id]; as poster) {
+                    <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" width="342" height="513" />
+                    } @else {
+                    <div class="image-placeholder">
+                        <span>MovieWeb</span>
+                    </div>
+                    }
+                    <span class="favorite-badge">❤️ Favorita</span>
+                </div>
+
+                <div class="poster-info">
+                    <h3>{{ movie.title }}</h3>
+
+                    <div class="poster-meta">
+                        <span>{{ movie.release_date?.slice(0, 4) || 'Sin año' }}</span>
+                        @if (movie.vote_average !== null) {
+                        <span class="rating">★ {{ movie.vote_average.toFixed(1) }}</span>
+                        }
+                    </div>
+
+                    <div class="user-mark-info">
+                        @if (movie.rating) {
+                        <span class="user-score">Tu voto: <strong>{{ movie.rating }}★</strong></span>
+                        }
+                        <span class="mark-date">{{ (movie.updated_at || movie.added_at) | date:'d/MM/yyyy' }}</span>
+                    </div>
+                </div>
+            </a>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Pestaña 3: Películas Calificadas -->
+    @if (activeTab() === 'rated') {
+    <section class="tab-content movies-section">
+        <div class="section-heading-with-sort">
+            <div>
+                <h2>Películas Calificadas</h2>
+                <p class="section-subtext">{{ ratedMovies().length }} películas con puntuación personal.</p>
+            </div>
+
+            <!-- Toolbar de ordenamiento -->
+            <div class="sort-toolbar">
+                <span class="sort-label">Ordenar por:</span>
+
+                <div class="sort-btn-group">
+                    <button
+                        type="button"
+                        class="sort-chip"
+                        [class.active]="sortField() === 'date'"
+                        (click)="setSortField('date')"
+                    >
+                        📅 Fecha de calif
+                    </button>
+                    <button
+                        type="button"
+                        class="sort-chip"
+                        [class.active]="sortField() === 'vote_average'"
+                        (click)="setSortField('vote_average')"
+                    >
+                        ★ Vote Avg
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    class="order-toggle-btn"
+                    (click)="toggleSortOrder()"
+                    [title]="sortOrder() === 'desc' ? 'Orden descendente' : 'Orden ascendente'"
+                >
+                    {{ sortOrder() === 'desc' ? '↓ Mayor a menor' : '↑ Menor a mayor' }}
+                </button>
+            </div>
+        </div>
+
+        @if (ratedMovies().length === 0) {
+        <div class="empty-tab-state">
+            <span class="empty-icon">⭐</span>
+            <h3>Sin películas calificadas</h3>
+            <p>Todavía no puntuaste ninguna película. Podés calificar películas de 1 a 5 estrellas desde su ficha.</p>
+            <a routerLink="/search" class="btn-secondary">Buscar películas</a>
+        </div>
+        } @else {
+        <div class="poster-grid">
+            @for (movie of sortedRated(); track movie.movie_id) {
+            <a class="poster-card" [routerLink]="['/movies', movie.movie_id]">
+                <div class="poster-image">
+                    @if (posters()[movie.movie_id]; as poster) {
+                    <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" width="342" height="513" />
+                    } @else {
+                    <div class="image-placeholder">
+                        <span>MovieWeb</span>
+                    </div>
+                    }
+                    <span class="rating-ribbon">⭐ {{ movie.rating }}/5</span>
+                </div>
+
+                <div class="poster-info">
+                    <h3>{{ movie.title }}</h3>
+
+                    <div class="poster-meta">
+                        <span>{{ movie.release_date?.slice(0, 4) || 'Sin año' }}</span>
+                        @if (movie.vote_average !== null) {
+                        <span class="rating">TMDB ★ {{ movie.vote_average.toFixed(1) }}</span>
+                        }
+                    </div>
+
+                    <div class="user-mark-info">
+                        <span class="user-stars-rated">
+                            @for (star of [1,2,3,4,5]; track star) {
+                                <span [class.filled]="star <= (movie.rating || 0)">★</span>
+                            }
+                        </span>
+                        <span class="mark-date">{{ (movie.updated_at || movie.added_at) | date:'d/MM/yyyy' }}</span>
+                    </div>
+                </div>
+            </a>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    }
+
+    }
+
+</main>
