@@ -1,162 +1,123 @@
-# Bases de Datos 2026
+# MovieWeb (Grupo X)
 
-## Trabajo Práctico: MovieWeb
+Trabajo práctico de **Bases de Datos y Recursos de Información 2026**, Universidad Austral.
 
-## Puesta en marcha rápida
+Aplicación web para buscar películas, actores y directores, ver toda su información
+(PostgreSQL + imágenes y tráilers de TMDB), marcar películas como favoritas o vistas,
+puntuarlas y seguir la actividad de cada usuario en un timeline (MongoDB).
 
-**Prerrequisitos:** [Node.js](https://nodejs.org) 20+ (incluye npm), y **PostgreSQL** y
-**MongoDB** instalados y corriendo en tu máquina (puertos por defecto `5432` y `27017`).
-El proyecto es un **monorepo npm** (carpetas `api/` y `web/`) orquestado con
-[Turborepo](https://turbo.build).
+## Integrantes
 
-**Windows:**
-
-1. Doble clic en **`INICIAR.cmd`** (instala dependencias y levanta API + frontend).
-2. Esperá a que la app responda en **http://localhost:4200**.
-
-| Acción | Cómo |
+| Integrante | Parte del trabajo |
 |---|---|
-| Detener todo | doble clic en `DETENER.cmd` (o `Ctrl+C` en la ventana) |
-| Recrear la base PostgreSQL desde cero | doble clic en `RESET_BD.cmd` (pide confirmación) |
-| Healthcheck de la API | http://localhost:3500/api/health |
+| Ian Espinillo | Estructura del proyecto, login, página de persona, dashboard y timeline, actividad en MongoDB |
+| Nicolás García Posadas | API de películas y keywords, contrato común de respuestas de la API |
+| Tomás Carrizo Aslanian | Búsqueda general, detalle de película, diseño visual |
+| Mateo Herrera | API de personas y usuarios, tablas de usuarios, índices y scripts de la base |
 
-**Cualquier sistema operativo (a mano):**
+## Requisitos
+
+- [Node.js](https://nodejs.org) 20 o superior (incluye npm).
+- **PostgreSQL** corriendo en el puerto `5432`.
+- **MongoDB** corriendo en el puerto `27017`.
+
+No hace falta crear la base `movies` a mano ni tener `psql` en el PATH: lo resuelve `npm run dev:setup`.
+
+## Instalación y ejecución
+
+**1. Obtener el código.** Descomprimir el zip de la entrega, o clonar el repositorio:
 
 ```bash
-npm install    # instala api + web (workspaces) y turbo
-npm run dev    # levanta api (3500) y web (4200) con Turborepo
+git clone https://github.com/ianespinillo/movieweb_2026.git
+cd movieweb_2026
 ```
 
-La primera vez, cargá la base `movies` siguiendo `db/instrucciones.txt` (o usá `RESET_BD.cmd`).
-Si `api/.env` no existe, se crea automáticamente a partir de `api/.env.example`.
+**2. Instalar las dependencias** (API, frontend y herramientas, en un solo paso):
 
-### Objetivos
-El objetivo principal de este trabajo práctico es adquirir experiencia en el desarrollo de una aplicación web que interactúa con una base de datos `PostgreSQL`. La aplicación se llama **MovieWeb** y tiene como objetivo permitir a los usuarios buscar películas, actores y directores, explorar la información detallada de películas, y buscar películas relacionadas a través de palabras clave.
-También se pretende conocer el uso básico de bases de datos NoSQL, como MongoDB.
-
----
-
-### Instalación de software
-Para realizar el TP se deberá instalar el siguiente software:
-
-> **Nota:** para el TP necesitás PostgreSQL, MongoDB, Node.js y un editor. La *Puesta en marcha rápida* solo automatiza el arranque de `api` + `web`; las bases corren nativas en tu máquina.
-
-1.  **Node.js y npm (Node Package Manager):** para ejecutar la aplicación web en un servidor local.
-2.  **PostgreSQL:** para gestionar la base de datos `movies` que contiene la información de películas, actores, directores, etc.
-3.  **Un editor de código** (por ejemplo, `WebStorm`, `Visual Studio Code`, etc.) para escribir y editar código.
-4.  **MongoDB**: base de datos NoSQL.
-
----
-
-### Código provisto
-Se proporciona código prefabricado que servirá como punto de partida para el desarrollo de la aplicación MovieWeb. Este código incluye la estructura básica de la aplicación `Node.js` con las rutas, vistas y archivos estáticos necesarios. También se proporciona la base de datos `movies`.
-
----
-
-### Descripción de funcionalidades
-
-1.  **Búsqueda de películas, actores y directores**
-    *   Modificar la página principal para que el buscador no solo busque nombres de películas, sino también nombres de personas que sean actores o directores.
-    *   Crear una página de resultados de búsqueda que liste los resultados separados en secciones: películas, actores y directores.
-
-2.  **Páginas de personas (actores y directores)**
-    *   Al hacer clic en una persona (actor o director) en la página de resultados de búsqueda, se debe mostrar la página de esa persona.
-    *   En la página de la persona, listar las películas en las que esa persona ha participado como actor o director.
-
-3.  **Información detallada de películas**
-    *   Modificar la página de películas para que incluya todos los datos de la película, incluyendo género, país de producción, etc. Mostrar toda la información contenida en las tablas de la base de datos `movies`.
-
-4.  **Búsqueda de películas por palabras clave**
-    *   Incluir un buscador de palabras clave (keywords) que devuelva como resultado las películas relacionadas con la palabra de búsqueda.
-
-5.  **Registro de actividad del usuario**
-    * Registrar tres tipos de actividades del usuario usando MongoDB (ver punto 3 de las Instrucciones).
-
----
-
-### Instrucciones
-Se deben completar las siguientes tareas como parte de este TP:
-
-#### 1. Configuración del entorno:
-> **Con `INICIAR.cmd` o `npm run dev` el arranque queda resuelto** (ver *Puesta en marcha rápida*). Los pasos de abajo cubren la instalación de las bases y las dependencias.
-
-*   Instalar `Node.js`.
-*   Instalar `PostgreSQL` y la base de datos `movies` (ver instrucciones en carpeta `db`).
-*   Instalar `MongoDB`.
-*   Descargar el código proporcionado y configurar el entorno de desarrollo.
-*   Instalar dependencias y ejecutar la aplicación:
-
-    ```bash
-    # Instalar dependencias (api + web) y turbo
-    npm install
-    
-    # Levantar API (3500) y frontend (4200) con Turborepo
-    npm run dev
-    ```
-
-#### 2. Desarrollo de funcionalidades:
-*   Modificar el código existente para habilitar la búsqueda de películas, actores y directores en la página principal (`index.ejs` y `app.js`).
-*   Modificar la página de resultados de búsqueda (`resultado.ejs`) para mostrar los resultados separados en secciones (películas, actores, directores).
-*   Desarrollar la funcionalidad para mostrar la lista de películas en las que una persona (actor o director) ha participado al hacer clic en su nombre. Página de actor (`actor.ejs`) y director (`director.ejs`).
-*   Mejorar la página de película (`pelicula.ejs`) para mostrar toda la información contenida en la base de datos `movies`.
-*   Implementar un buscador de palabras clave que devuelva películas relacionadas. Crear las páginas del buscador y de resultados (`search_keyword.ejs` y `resultados_keyword.ejs`).
-*   Crear las tablas y archivos necesarios para permitir la creación, modificación y borrado de usuarios (`user_id`, `user_username`, `user_name`, `user_email`) y las películas que les gustan (`movie_user`). Debe ser posible listar los usuarios, las películas asociadas a los usuarios, la puntuación que asignaron a una determinada película y la opinión sobre esa película.
-
----
-
-### 3. Registro de actividad del usuario (Timeline con MongoDB)
-
-#### Descripción:
-Crear una página de perfil de usuario donde se muestre un "timeline" o feed de su actividad reciente en el sitio. Esta actividad puede ser de 3 diferentes tipos:
-- *"calificó la película X con 4 estrellas"*
-- *"añadió la película Y a su lista de favoritos"*
-- *"escribió una reseña para la película Z"*
-
-#### Usar MongoDB tiene algunas ventajas
-**Diversidad de estructuras de datos:** cada tipo de evento de actividad tiene datos asociados diferentes. Una calificación tiene una puntuación, una reseña tiene texto, y un "favorito" es una acción simple.
-
-**Esquema flexible:** cada evento puede ser un documento en una colección `user_activity` con una estructura que se adapte al tipo de evento. No hay columnas vacías ni `JOIN`s innecesarios.
-
-**Consultas simples para feeds:** para obtener el timeline de un usuario basta con hacer un `find({ userId: "..." })` en la colección y ordenarlo por fecha, por ejemplo.
-
-#### Ejemplo de documentos en MongoDB (Colección: `user_activity`)
-
-```json
-// Evento de calificación
-{
-  "_id": ObjectId("..."),
-  "userId": "user_abc",
-  "type": "RATED_MOVIE",
-  "timestamp": ISODate("2023-10-27T12:00:00Z"),
-  "details": {
-    "movieId": 54321,
-    "movieTitle": "El Origen",
-    "rating": 5
-  }
-}
-
-// Evento de reseña
-{
-  "_id": ObjectId("..."),
-  "userId": "user_abc",
-  "type": "WROTE_REVIEW",
-  "timestamp": ISODate("2023-10-26T18:45:00Z"),
-  "details": {
-    "movieId": 67890,
-    "movieTitle": "Parásitos",
-    "reviewId": "review_1122" // ID que apunta a otra colección o sistema
-  }
-}
-
-// Evento de añadido a favoritos
-{
-  "_id": ObjectId("..."),
-  "userId": "user_abc",
-  "type": "ADDED_TO_FAVORITES",
-  "timestamp": ISODate("2023-10-25T09:30:00Z"),
-  "details": {
-    "movieId": 12345,
-    "movieTitle": "El Señor de los Anillos: La Comunidad del Anillo"
-  }
-}
+```bash
+npm install
 ```
+
+**3. Configurar `api/.env`.** En la entrega ya viene incluido. Si no existe, copiar `api/.env.example`
+como `api/.env` (`npm run dev:setup` lo crea solo) y revisar estas variables:
+
+| Variable | Qué poner |
+|---|---|
+| `DB_USER`, `DB_PASSWORD` | Usuario y contraseña de **tu** PostgreSQL |
+| `DB_HOST`, `DB_PORT` | `localhost` y `5432` |
+| `DB_DATABASE`, `DB_SCHEMA` | `movies` y `movies` (la base se crea sola si no existe) |
+| `MONGO_URI` | `mongodb://localhost:27017/movieweb` |
+| `TMDB_API_KEY` | Clave de [TMDB](https://www.themoviedb.org/settings/api). Sin ella la app anda, pero sin pósters, fotos ni tráilers |
+| `JWT_SECRET`, `JWT_EXPIRES` | Cualquier texto largo, y `7d` |
+| `PORT`, `CORS_ORIGIN` | `3500` y `http://localhost:4200` |
+
+**4. Preparar las bases:**
+
+```bash
+npm run dev:setup
+```
+
+Crea la base `movies` si no existe, carga los datos de películas del enunciado, crea las tablas
+del TP (usuarios y sus películas), los índices y los usuarios de prueba. La primera vez tarda
+menos de un minuto. Se puede correr más de una vez: lo que ya existe no se duplica.
+
+**5. Levantar la aplicación:**
+
+```bash
+npm start
+```
+
+Abrir **http://localhost:4200**. La API queda en http://localhost:3500 (control: http://localhost:3500/api/health).
+
+En **Windows** también se puede usar doble clic en `INICIAR.cmd` (instala y levanta), `DETENER.cmd` y
+`RESET_BD.cmd` (recarga la base desde cero, pide confirmación).
+
+## Usuarios de prueba
+
+Todos con la contraseña `movieweb2026`. Se puede entrar con el mail o con el nombre de usuario.
+
+| Usuario | Mail |
+|---|---|
+| `ana_cine` | ana@movieweb.test |
+| `bruno_m` | bruno@movieweb.test |
+| `carla_r` | carla@movieweb.test |
+| `diego_p` | diego@movieweb.test |
+
+Cada uno tiene películas marcadas como favoritas, vistas o puntuadas, y actividad en su timeline.
+
+## Bases de datos
+
+**PostgreSQL**: base `movies`, esquema `movies`. Scripts en `db/`:
+
+| Script | Qué hace |
+|---|---|
+| `01` a `12_*.sql` | Datos de películas del enunciado (`00_load_all.sql` los corre en orden con psql) |
+| `13_users.sql` | Crea las tablas del TP: `users` y `user_movies` |
+| `14_people_indexes.sql` | Índices para la búsqueda de personas |
+| `15_seed_users.sql` | Usuarios de prueba y sus películas |
+| `drop_tp_tables.sql` | Borra solo lo que agrega el TP; las películas quedan |
+
+**MongoDB**: base `movieweb`, colección `user_activity` con la actividad de cada usuario. Si está
+vacía, la API carga actividad de ejemplo para los usuarios de prueba al arrancar.
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev:setup` | Crea lo que falte, sin borrar nada |
+| `npm run dev:reset` | Recarga todo desde cero (PostgreSQL y la actividad de MongoDB) |
+| `npm run db:drop` | Corre `drop_tp_tables.sql` |
+
+La forma manual, con `psql`, está en `db/instrucciones.txt`.
+
+## Estructura
+
+```
+api/                 API REST (Express + TypeScript), puerto 3500
+  src/routes/        movies, keywords, people, users, auth, activity, tmdb
+  scripts/           setup-db.mjs (lo que corre npm run dev:setup)
+web/                 Frontend (Angular), puerto 4200
+packages/contracts/  Tipos compartidos entre api y web: la forma de cada respuesta
+db/                  Scripts SQL
+```
+
+Todas las respuestas de la API tienen la forma `{ success, data, timestamp }`, y los errores
+`{ success: false, statusCode, message, ... }`. Los tipos de cada ruta están en `packages/contracts`.
