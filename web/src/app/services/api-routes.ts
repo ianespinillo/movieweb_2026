@@ -9,6 +9,8 @@ export const MOVIE_ROUTES = {
   search: `${API_URL}/movies/search`,
   /** → MovieDetail */
   detail: (id: number | string) => `${API_URL}/movies/${id}`,
+  /** → MovieReview[] (public, newest first) */
+  reviews: (id: number | string) => `${API_URL}/movies/${id}/reviews`,
 } as const;
 
 export const KEYWORD_ROUTES = {
@@ -28,6 +30,8 @@ export const USER_ROUTES = {
   detail: (id: number | string) => `${API_URL}/users/${id}`,
   movies: (id: number | string) => `${API_URL}/users/${id}/movies`,
   movie: (id: number | string, movieId: number | string) => `${API_URL}/users/${id}/movies/${movieId}`,
+  /** PUT { text } → Review, DELETE → Review (auth + owner) */
+  review: (id: number | string, movieId: number | string) => `${API_URL}/users/${id}/movies/${movieId}/review`,
 } as const;
 
 export const ACTIVITY_ROUTES = {
