@@ -10,6 +10,7 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import {
@@ -25,6 +26,7 @@ import {
 
 import type {
   MovieDetail as MovieDetailModel,
+  MovieReview,
   TmdbMovieMeta,
   TmdbPersonMeta,
   TmdbVideo,
@@ -34,6 +36,8 @@ import type {
 import { Movie as MovieService } from '../../services/movie';
 import { AuthService } from '../../services/auth';
 import { UserService } from '../../services/user';
+import { ReviewService } from '../../services/review';
+import { apiErrorMessage } from '../../services/api-response';
 import { TMDB_ROUTES } from '../../services/api-routes';
 
 interface ApiResponse<T> {
@@ -44,7 +48,7 @@ interface ApiResponse<T> {
 
 @Component({
   selector: 'app-movie-detail',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   templateUrl: './movie-detail.html',
   styleUrl: './movie-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,6 +58,7 @@ export class MovieDetail {
   private readonly movieService = inject(MovieService);
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
+  private readonly reviewService = inject(ReviewService);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly sanitizer = inject(DomSanitizer);
@@ -78,6 +83,22 @@ export class MovieDetail {
   readonly userMovie = signal<UserMovie | null>(null);
   readonly isSavingUserMovie = signal(false);
   readonly hoverRating = signal<number | null>(null);
+
+  // Text reviews
+  readonly maxReviewLength = 2000;
+  readonly reviews = signal<MovieReview[]>([]);
+  readonly reviewDraft = signal('');
+  readonly isSavingReview = signal(false);
+  readonly reviewError = signal<string | null>(null);
+
+  readonly myReview = computed(() => {
+    const user = this.currentUser();
+    return user ? this.reviews().find(r => r.user_id === user.user_id) ?? null : null;
+  });
+
+  readonly reviewDirty = computed(
+    () => this.reviewDraft().trim() !== (this.myReview()?.text ?? '')
+  );
 
   readonly visibleCast = computed(() => {
     const cast = this.movie()?.cast ?? [];
@@ -137,6 +158,9 @@ export class MovieDetail {
         this.directorPhotos.set({});
         this.showAllCast.set(false);
         this.userMovie.set(null);
+        this.reviews.set([]);
+        this.reviewDraft.set('');
+        this.reviewError.set(null);
       }),
 
       switchMap(params => {
@@ -188,6 +212,7 @@ export class MovieDetail {
       if (result.movie) {
         this.loadPersonPhotos(result.movie);
         this.loadUserMovie(result.movie.movie_id);
+        this.loadReviews(result.movie.movie_id);
       }
     });
 
@@ -196,6 +221,7 @@ export class MovieDetail {
       const currentMovie = this.movie();
       if (user && currentMovie) {
         this.loadUserMovie(currentMovie.movie_id);
+        this.loadReviews(currentMovie.movie_id);
       } else if (!user) {
         this.userMovie.set(null);
       }
@@ -215,6 +241,76 @@ export class MovieDetail {
       .subscribe(list => {
         const match = list.find(m => m.movie_id === movieId);
         this.userMovie.set(match ?? null);
+      });
+  }
+
+  private loadReviews(movieId: number): void {
+    this.reviewService
+      .getMovieReviews(movieId)
+      .pipe(
+        catchError(() => of([] as MovieReview[])),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(list => {
+        if (this.movie()?.movie_id !== movieId) return;
+        this.reviews.set(list);
+        this.reviewDraft.set(this.myReview()?.text ?? '');
+      });
+  }
+
+  onReviewInput(event: Event): void {
+    this.reviewDraft.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  openLogin(): void {
+    this.authService.openModal();
+  }
+
+  saveReview(): void {
+    const user = this.currentUser();
+    const movie = this.movie();
+    if (!user || !movie) {
+      this.authService.openModal();
+      return;
+    }
+
+    this.isSavingReview.set(true);
+    this.reviewError.set(null);
+    this.reviewService
+      .saveReview(user.user_id, movie.movie_id, { text: this.reviewDraft().trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isSavingReview.set(false);
+          this.loadReviews(movie.movie_id);
+        },
+        error: err => {
+          this.reviewError.set(apiErrorMessage(err));
+          this.isSavingReview.set(false);
+        },
+      });
+  }
+
+  deleteReview(): void {
+    const user = this.currentUser();
+    const movie = this.movie();
+    if (!user || !movie) return;
+
+    this.isSavingReview.set(true);
+    this.reviewError.set(null);
+    this.reviewService
+      .deleteReview(user.user_id, movie.movie_id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isSavingReview.set(false);
+          this.reviews.update(list => list.filter(r => r.user_id !== user.user_id));
+          this.reviewDraft.set('');
+        },
+        error: err => {
+          this.reviewError.set(apiErrorMessage(err));
+          this.isSavingReview.set(false);
+        },
       });
   }
 

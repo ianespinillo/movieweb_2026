@@ -219,6 +219,10 @@
                         }
                     </div>
 
+                    @if (movie.review; as review) {
+                    <p class="review-snippet" [title]="review.text">“{{ review.text }}”</p>
+                    }
+
                     <div class="user-mark-info">
                         @if (movie.rating) {
                         <span class="user-score">Tu voto: <strong>{{ movie.rating }}★</strong></span>
@@ -307,6 +311,10 @@
                         <span class="rating">TMDB ★ {{ movie.vote_average.toFixed(1) }}</span>
                         }
                     </div>
+
+                    @if (movie.review; as review) {
+                    <p class="review-snippet" [title]="review.text">“{{ review.text }}”</p>
+                    }
 
                     <div class="user-mark-info">
                         <span class="user-stars-rated">

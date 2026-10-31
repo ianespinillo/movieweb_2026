@@ -713,3 +713,17 @@
         justify-content: space-between;
     }
 }
+
+.review-snippet {
+    margin: 10px 0 0;
+    color: #b7c8d8;
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
