@@ -1,16 +1,16 @@
-# MovieWeb (Grupo X)
+# MovieWeb (Grupo 5)
 
 Trabajo práctico de **Bases de Datos y Recursos de Información 2026**, Universidad Austral.
 
 Aplicación web para buscar películas, actores y directores, ver toda su información
 (PostgreSQL + imágenes y tráilers de TMDB), marcar películas como favoritas o vistas,
-puntuarlas y seguir la actividad de cada usuario en un timeline (MongoDB).
+puntuarlas, escribirles reseñas y seguir la actividad de cada usuario en un timeline (MongoDB).
 
 ## Integrantes
 
 | Integrante | Parte del trabajo |
 |---|---|
-| Ian Espinillo | Estructura del proyecto, login, página de persona, dashboard y timeline, actividad en MongoDB |
+| Ian Espinillo | Estructura del proyecto, login, página de persona, dashboard y timeline, actividad y reseñas en MongoDB |
 | Nicolás García Posadas | API de películas y keywords, contrato común de respuestas de la API |
 | Tomás Carrizo Aslanian | Búsqueda general, detalle de película, diseño visual |
 | Mateo Herrera | API de personas y usuarios, tablas de usuarios, índices y scripts de la base |
@@ -97,13 +97,16 @@ Cada uno tiene películas marcadas como favoritas, vistas o puntuadas, y activid
 | `15_seed_users.sql` | Usuarios de prueba y sus películas |
 | `drop_tp_tables.sql` | Borra solo lo que agrega el TP; las películas quedan |
 
-**MongoDB**: base `movieweb`, colección `user_activity` con la actividad de cada usuario. Si está
-vacía, la API carga actividad de ejemplo para los usuarios de prueba al arrancar.
+**MongoDB**: base `movieweb`, con dos colecciones:
+
+- `user_activity`: la actividad de cada usuario (calificó, agregó a favoritos, escribió una reseña).
+  Si está vacía, la API carga actividad de ejemplo para los usuarios de prueba al arrancar.
+- `reviews`: las reseñas de texto, una por usuario y película.
 
 | Comando | Qué hace |
 |---|---|
 | `npm run dev:setup` | Crea lo que falte, sin borrar nada |
-| `npm run dev:reset` | Recarga todo desde cero (PostgreSQL y la actividad de MongoDB) |
+| `npm run dev:reset` | Recarga todo desde cero (PostgreSQL, y vacía la actividad y las reseñas de MongoDB) |
 | `npm run db:drop` | Corre `drop_tp_tables.sql` |
 
 La forma manual, con `psql`, está en `db/instrucciones.txt`.
@@ -113,6 +116,7 @@ La forma manual, con `psql`, está en `db/instrucciones.txt`.
 ```
 api/                 API REST (Express + TypeScript), puerto 3500
   src/routes/        movies, keywords, people, users, auth, activity, tmdb
+  src/models/        modelos de MongoDB (reseñas)
   scripts/           setup-db.mjs (lo que corre npm run dev:setup)
 web/                 Frontend (Angular), puerto 4200
 packages/contracts/  Tipos compartidos entre api y web: la forma de cada respuesta
