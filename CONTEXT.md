@@ -390,11 +390,12 @@ CORS_ORIGIN=http://localhost:4200
 # 1. Instalar dependencias del monorepo (api + web) y turbo
 npm install
 
-# 2. Seed de PostgreSQL (solo la primera vez)
-psql --single-transaction -d movies -U postgres -f db/00_load_all.sql
+# 2. Crear la base y cargar todo (datos, tablas del TP, índices, usuarios de prueba).
+#    No necesita psql: api/scripts/setup-db.mjs corre db/*.sql con pg. Idempotente.
+npm run dev:setup        # npm run dev:reset recarga desde cero; npm run db:drop borra lo del TP
 
 # 3. Levantar API (3500) + frontend (4200) juntos con Turborepo
-npm run dev
+npm start                # igual que npm run dev
 ```
 
 ## Notes for the LLM

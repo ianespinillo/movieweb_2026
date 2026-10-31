@@ -11,6 +11,10 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "start": "turbo run dev",
+    "dev:setup": "npm run db:setup -w api",
+    "dev:reset": "npm run db:setup -w api -- --reset",
+    "db:drop": "npm run db:setup -w api -- --drop",
     "build": "turbo run build",
     "test": "turbo run test"
   },
