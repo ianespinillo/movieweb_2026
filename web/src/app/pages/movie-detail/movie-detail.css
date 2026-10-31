@@ -1113,3 +1113,15 @@
         width: 100%;
     }
 }
+
+.review-form { display: grid; gap: 8px; margin-bottom: 20px; }
+.review-form label { color: #f5f7fa; font-weight: 600; }
+.review-form textarea { width: 100%; box-sizing: border-box; padding: 12px; resize: vertical; background: #142131; border: 1px solid #263d52; border-radius: 8px; color: #f5f7fa; font: inherit; }
+.review-form-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.review-actions { display: flex; gap: 8px; }
+.review-counter { color: #8da4b8; font-size: 12px; }
+.review-card { padding: 16px; margin-bottom: 12px; background: #14202d; border: 1px solid #2b4052; border-radius: 12px; }
+.review-card header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #8da4b8; font-size: 13px; }
+.review-card header strong { color: #f5f7fa; }
+.review-card header time { margin-left: auto; }
+.review-card p { margin: 8px 0 0; color: #d3dde7; white-space: pre-wrap; overflow-wrap: anywhere; }

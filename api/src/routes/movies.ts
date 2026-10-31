@@ -5,6 +5,7 @@ import { asyncHandler } from '../http/middleware.js';
 import { paginated, readPagination } from '../http/pagination.js';
 import { parseId } from '../http/params.js';
 import { ok } from '../http/response.js';
+import { ReviewModel, toReview } from '../models/review.js';
 import { containsPattern, readSearchTerm } from '../utils/search.js';
 import {
   CastRow,
@@ -15,11 +16,18 @@ import {
   KeywordRow,
   LanguageRow,
   MovieDetail,
+  MovieReview,
   MovieRow,
   MovieSummary,
 } from '../types/index.js';
 
 const router = Router();
+
+interface AuthorRow {
+  user_id: number;
+  user_username: string;
+  user_name: string | null;
+}
 
 // GET /api/movies/search?q=:term&page=&limit= — movies whose title contains the term
 router.get('/search', asyncHandler(async (req: Request, res: Response) => {
@@ -151,6 +159,34 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   };
 
   ok(res, detail);
+}));
+
+// GET /api/movies/:id/reviews — every user's review of the movie, last edited first
+router.get('/:id/reviews', asyncHandler(async (req: Request, res: Response) => {
+  const movieId = parseId(req.params.id);
+  if (movieId === null) throw badRequest('Invalid movie id');
+
+  const reviews = await ReviewModel.find({ movieId }).sort({ updatedAt: -1 });
+
+  // Authors live in PostgreSQL: one query for all of them, not one per review
+  const userIds = [...new Set(reviews.map((r) => Number(r.userId)))];
+  const authors = userIds.length === 0
+    ? { rows: [] as AuthorRow[] }
+    : await pool.query<AuthorRow>(
+        'SELECT user_id, user_username, user_name FROM users WHERE user_id = ANY($1)',
+        [userIds]
+      );
+  const authorById = new Map(authors.rows.map((a) => [a.user_id, a]));
+
+  // A review whose author no longer exists (deleted user, Mongo cleanup failed) is skipped
+  const items: MovieReview[] = [];
+  for (const review of reviews) {
+    const author = authorById.get(Number(review.userId));
+    if (!author) continue;
+    items.push({ ...toReview(review), user_username: author.user_username, user_name: author.user_name });
+  }
+
+  ok(res, items);
 }));
 
 export default router;

@@ -297,6 +297,56 @@
             }
         </section>
 
+        <section id="reviews" class="detail-section">
+            <div class="section-heading">
+                <span class="heading-icon" aria-hidden="true">✍</span>
+                <h2>Reseñas ({{ reviews().length }})</h2>
+            </div>
+
+            @if (currentUser()) {
+            <form class="review-form" (submit)="$event.preventDefault(); saveReview()">
+                <label for="review-text">{{ myReview() ? 'Tu reseña' : 'Escribí tu reseña' }}</label>
+                <textarea id="review-text" rows="4" [maxLength]="maxReviewLength" [value]="reviewDraft()"
+                    (input)="onReviewInput($event)" [disabled]="isSavingReview()"
+                    placeholder="¿Qué te pareció la película?"></textarea>
+                <div class="review-form-footer">
+                    <span class="review-counter">{{ reviewDraft().length }}/{{ maxReviewLength }}</span>
+                    <div class="review-actions">
+                        @if (myReview()) {
+                        <button type="button" class="action-toggle-btn" (click)="deleteReview()"
+                            [disabled]="isSavingReview()">Borrar</button>
+                        }
+                        <button type="submit" class="action-toggle-btn active"
+                            [disabled]="isSavingReview() || !reviewDraft().trim() || !reviewDirty()">
+                            {{ isSavingReview() ? 'Guardando...' : (myReview() ? 'Actualizar' : 'Publicar') }}
+                        </button>
+                    </div>
+                </div>
+                @if (reviewError(); as message) {
+                <p class="error-message" role="alert">{{ message }}</p>
+                }
+            </form>
+            } @else {
+            <p class="empty-message">
+                <button type="button" class="text-button" (click)="openLogin()">Iniciá sesión</button>
+                para escribir una reseña.
+            </p>
+            }
+
+            @for (review of reviews(); track review.review_id) {
+            <article class="review-card">
+                <header>
+                    <strong>{{ review.user_name || review.user_username }}</strong>
+                    <span>&#64;{{ review.user_username }}</span>
+                    <time>{{ review.updated_at | date:'d MMM y' }}</time>
+                </header>
+                <p>{{ review.text }}</p>
+            </article>
+            } @empty {
+            <p class="empty-message">Todavía no hay reseñas para esta película.</p>
+            }
+        </section>
+
         @if (film.directors.length > 0) {
         <section class="detail-section">
             <div class="section-heading">
