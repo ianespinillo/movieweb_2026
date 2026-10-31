@@ -1,5 +1,6 @@
 import type { AuthUser } from './auth';
 import type { Movie } from './movies';
+import type { UserMovieReview } from './reviews';
 
 /** A user as the API returns it. Same shape as AuthUser: never includes the password hash. */
 export type User = AuthUser;
@@ -41,4 +42,6 @@ export interface UserMovie extends Pick<Movie, 'movie_id' | 'title' | 'release_d
   added_at: string;
   /** ISO 8601 */
   updated_at: string;
+  /** The user's text review of this movie, null when there is none. Only set by the list route. */
+  review?: UserMovieReview | null;
 }

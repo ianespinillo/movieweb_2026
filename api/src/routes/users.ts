@@ -7,8 +7,10 @@ import { paginated, readPagination } from '../http/pagination.js';
 import { parseId } from '../http/params.js';
 import { ok } from '../http/response.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { MAX_REVIEW_LENGTH, ReviewModel, toReview } from '../models/review.js';
 import {
   AuthRequest,
+  ReviewRequest,
   UpdateUserRequest,
   User,
   UserMovie,
@@ -178,6 +180,13 @@ router.delete('/:id', authenticate, asyncHandler(async (req: Request, res: Respo
     console.error('Error removing user activity from Mongo:', mongoErr);
   }
 
+  // ...and their reviews
+  try {
+    await ReviewModel.deleteMany({ userId: String(userId) });
+  } catch (mongoErr) {
+    console.error('Error removing user reviews from Mongo:', mongoErr);
+  }
+
   ok(res, result.rows[0]);
 }));
 
@@ -187,7 +196,7 @@ router.delete('/:id', authenticate, asyncHandler(async (req: Request, res: Respo
 router.get('/:id/movies', asyncHandler(async (req: Request, res: Response) => {
   const userId = readUserId(req);
 
-  const [userResult, moviesResult] = await Promise.all([
+  const [userResult, moviesResult, reviews] = await Promise.all([
     pool.query('SELECT 1 FROM users WHERE user_id = $1', [userId]),
     pool.query<UserMovie>(
       `${USER_MOVIE_SELECT}
@@ -195,10 +204,23 @@ router.get('/:id/movies', asyncHandler(async (req: Request, res: Response) => {
        ORDER BY um.updated_at DESC, m.title, m.movie_id`,
       [userId]
     ),
+    // Reviews live in MongoDB: one query, merged by movie id below
+    ReviewModel.find({ userId: String(userId) }),
   ]);
   if (userResult.rows.length === 0) throw notFound('User not found');
 
-  ok(res, moviesResult.rows);
+  const reviewByMovie = new Map(reviews.map((r) => [r.movieId, r]));
+  const movies = moviesResult.rows.map((movie): UserMovie => {
+    const review = reviewByMovie.get(movie.movie_id);
+    return {
+      ...movie,
+      review: review
+        ? { review_id: String(review._id), text: review.text, updated_at: review.updatedAt.toISOString() }
+        : null,
+    };
+  });
+
+  ok(res, movies);
 }));
 
 interface Marks {
@@ -340,6 +362,78 @@ router.delete('/:id/movies/:movieId', authenticate, asyncHandler(async (req: Req
   if (result.rows.length === 0) throw notFound('Movie is not in this user\'s list');
 
   ok(res, result.rows[0]);
+}));
+
+// ─── A user's review of a movie (text, stored in MongoDB) ────────────────────
+
+// PUT /api/users/:id/movies/:movieId/review — create or edit the user's review.
+// Only creating records a WROTE_REVIEW event; editing does not.
+router.put('/:id/movies/:movieId/review', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const userId = readUserId(req);
+  requireSelf(req, userId);
+  const movieId = parseId(req.params.movieId);
+  if (movieId === null) throw badRequest('Invalid movie id');
+
+  const { text } = (req.body ?? {}) as Partial<ReviewRequest>;
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (!trimmed || trimmed.length > MAX_REVIEW_LENGTH) {
+    throw badRequest(`text must be 1 to ${MAX_REVIEW_LENGTH} characters`);
+  }
+
+  const movieResult = await pool.query<{ title: string }>(
+    'SELECT title FROM movie WHERE movie_id = $1',
+    [movieId]
+  );
+  if (movieResult.rows.length === 0) throw notFound('Movie not found');
+  const movieTitle = movieResult.rows[0].title;
+
+  // includeResultMetadata tells us whether the upsert matched an existing review
+  const result = await ReviewModel.findOneAndUpdate(
+    { userId: String(userId), movieId },
+    { $set: { text: trimmed, movieTitle } },
+    { upsert: true, new: true, runValidators: true, includeResultMetadata: true }
+  );
+  const review = result.value;
+  if (!review) throw new Error('Review upsert returned no document');
+  const created = result.lastErrorObject?.updatedExisting === false;
+
+  if (created) {
+    try {
+      await Activity.create({
+        userId: String(userId),
+        type: 'WROTE_REVIEW',
+        timestamp: new Date(),
+        details: { movieId, movieTitle, reviewId: String(review._id) },
+      });
+    } catch (mongoErr) {
+      console.error('Error logging activity to Mongo:', mongoErr);
+    }
+  }
+
+  ok(res, toReview(review), created ? 201 : 200);
+}));
+
+// DELETE /api/users/:id/movies/:movieId/review — delete the review and its timeline event
+router.delete('/:id/movies/:movieId/review', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const userId = readUserId(req);
+  requireSelf(req, userId);
+  const movieId = parseId(req.params.movieId);
+  if (movieId === null) throw badRequest('Invalid movie id');
+
+  const review = await ReviewModel.findOneAndDelete({ userId: String(userId), movieId });
+  if (!review) throw notFound('Review not found');
+
+  try {
+    await Activity.deleteMany({
+      userId: String(userId),
+      type: 'WROTE_REVIEW',
+      'details.reviewId': String(review._id),
+    });
+  } catch (mongoErr) {
+    console.error('Error removing review activity from Mongo:', mongoErr);
+  }
+
+  ok(res, toReview(review));
 }));
 
 export default router;

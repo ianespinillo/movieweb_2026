@@ -255,6 +255,19 @@ Three event types, stored in a single `user_activity` collection:
 { "userId": "1", "type": "WROTE_REVIEW",        "timestamp": ISODate, "details": { "movieId": 123, "movieTitle": "...", "reviewId": "..." } }
 ```
 
+## Database — MongoDB Collection `reviews`
+
+One text review per user and movie (unique index `{ userId, movieId }`, plus an index on `movieId`).
+Independent of `user_movies`: removing a favorite or rating does not delete the review.
+Model: `api/src/models/review.ts`.
+
+```json
+{ "_id": ObjectId, "userId": "1", "movieId": 123, "movieTitle": "...", "text": "1 to 2000 chars (trimmed)", "createdAt": ISODate, "updatedAt": ISODate }
+```
+
+- Creating a review records a `WROTE_REVIEW` event in `user_activity` with `details.reviewId = _id`. Editing does not.
+- Deleting a review deletes that event. Deleting a user deletes their reviews.
+
 ## API Response Contract (`packages/contracts`)
 
 Every endpoint answers with the same envelope. The types live in `@movieweb/contracts` and are
@@ -303,6 +316,7 @@ gives the user-facing message of a failed request.
 |--------|------|-------------|
 | GET | `/api/movies/search?q=:term&page=&limit=` | Search movies by title (ILIKE) → `PaginatedResponse<MovieSummary>` |
 | GET | `/api/movies/:id` | Full movie detail: cast, crew, genres, countries, keywords, languages, companies → `MovieDetail` |
+| GET | `/api/movies/:id/reviews` | Reviews of the movie, last edited first, with author from PostgreSQL → `MovieReview[]` |
 
 ### People (PostgreSQL)
 | Method | Path | Description |
@@ -322,8 +336,10 @@ gives the user-facing message of a failed request.
 | POST | `/api/users` | Create user |
 | PUT | `/api/users/:id` | Update user |
 | DELETE | `/api/users/:id` | Delete user |
-| GET | `/api/users/:id/movies` | User's favorites with rating + review |
-| POST | `/api/users/:id/movies` | Add movie to user favorites |
+| GET | `/api/users/:id/movies` | User's movies with marks, rating and `review` (`UserMovieReview \| null`) → `UserMovie[]` |
+| PUT | `/api/users/:id/movies/:movieId` | Mark favorite / watched / rating (auth + owner) |
+| PUT | `/api/users/:id/movies/:movieId/review` | Create or edit own review, body `{ text }` (auth + owner) → `Review` (201 on create, 200 on edit) |
+| DELETE | `/api/users/:id/movies/:movieId/review` | Delete own review and its `WROTE_REVIEW` event (auth + owner) → `Review` |
 
 ### Activity (MongoDB)
 | Method | Path | Description |
