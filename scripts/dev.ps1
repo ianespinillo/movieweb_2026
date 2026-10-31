@@ -157,12 +157,10 @@ function Invoke-Stop {
 }
 
 function Invoke-Reset {
-    if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
-        Fail 'No encontré "psql" en el PATH.' 'Agregá la carpeta bin de PostgreSQL al PATH (o usá pgAdmin) y volvé a ejecutar.'
-    }
+    Assert-Node
     Write-Host ''
     Write-Host '  ATENCIÓN: esto BORRA y recrea el esquema de PostgreSQL (películas, usuarios, ratings...).' -ForegroundColor Red
-    Write-Host '  La base de MongoDB NO se toca.' -ForegroundColor Red
+    Write-Host '  También vacía la actividad de MongoDB, que la API vuelve a cargar al arrancar.' -ForegroundColor Red
     Write-Host ''
     $answer = Read-Host 'Escribí SI para confirmar, o cualquier otra cosa para cancelar'
     if ($answer -ne 'SI') {
@@ -170,32 +168,15 @@ function Invoke-Reset {
         exit 0
     }
 
-    $map = Get-EnvMap
-    $dbUser = if ($map['DB_USER']) { $map['DB_USER'] } else { 'postgres' }
-    $dbHost = if ($map['DB_HOST']) { $map['DB_HOST'] } else { 'localhost' }
-    $dbPort = if ($map['DB_PORT']) { $map['DB_PORT'] } else { '5432' }
-    $dbName = if ($map['DB_DATABASE']) { $map['DB_DATABASE'] } else { 'movies' }
-    if ($map['DB_PASSWORD']) { $env:PGPASSWORD = $map['DB_PASSWORD'] }
-
-    $dbDir = Join-Path $root 'db'
-    Push-Location $dbDir
-    try {
-        Say 'Cargando 00_load_all.sql (esquema + datos)...' 'Cyan'
-        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '00_load_all.sql'
-        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 00_load_all.sql.' 'Revisá las credenciales en api/.env, que el servidor PostgreSQL esté arriba y que la base "movies" exista.' }
-        Say 'Cargando 13_users.sql...' 'Cyan'
-        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '13_users.sql'
-        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 13_users.sql.' 'Mirá el error de arriba.' }
-        Say 'Cargando 14_people_indexes.sql...' 'Cyan'
-        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '14_people_indexes.sql'
-        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 14_people_indexes.sql.' 'Mirá el error de arriba.' }
-        Say 'Cargando 15_seed_users.sql (usuarios de prueba)...' 'Cyan'
-        & psql --single-transaction -v ON_ERROR_STOP=1 -h $dbHost -p $dbPort -U $dbUser -d $dbName -f '15_seed_users.sql'
-        if ($LASTEXITCODE -ne 0) { Fail 'Falló la carga de 15_seed_users.sql.' 'Mirá el error de arriba.' }
-    } finally {
-        Pop-Location
-        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    if (-not (Test-Path (Join-Path $root 'node_modules'))) {
+        Say 'Instalando dependencias (npm install)...' 'Cyan'
+        & npm install
+        if ($LASTEXITCODE -ne 0) { Fail 'Falló npm install.' 'Revisá el error de arriba (¿tenés internet?).' }
     }
+
+    # Mismo script que `npm run dev:setup`, con --reset: no necesita psql en el PATH.
+    & npm run dev:reset
+    if ($LASTEXITCODE -ne 0) { Fail 'Falló la recarga de la base.' 'Mirá el error de arriba.' }
     Say 'Base PostgreSQL "movies" recreada.' 'Green'
 }
 

@@ -1,5 +1,12 @@
 -- Instrucciones para crear tablas y datos en la base de datos "movies"
 
+-- FORMA RECOMENDADA: desde la raíz del repo, con api/.env configurado, correr
+--   npm run dev:setup
+-- Crea la base si no existe y corre todos los scripts de esta carpeta. No necesita psql.
+-- npm run dev:reset recarga todo desde cero; npm run db:drop borra solo lo que agrega el TP.
+
+-- Lo que sigue es la forma manual, con psql.
+
 -- La base de datos "movies" debe existir: crearla previamente usando pgadmin o la consola.
 
 -- Abrir cmd or PowerShell (MacOS: terminal).
