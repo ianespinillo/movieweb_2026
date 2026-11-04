@@ -456,8 +456,13 @@ export class MovieDetail {
     return date ? date.substring(0, 4) : 'Sin año';
   }
 
+  /** A movie lists its language once as Original and again as Spoken: show each name once. */
+  uniqueLanguages(languages: { language_name: string }[]): string[] {
+    return [...new Set(languages.map(language => language.language_name))];
+  }
+
   formatRuntime(minutes: number | null): string {
-    if (minutes === null) return 'Sin información';
+    if (!minutes) return 'Sin información'; // the data uses 0 for unknown
 
     const hours = Math.floor(minutes / 60);
     const remaining = minutes % 60;
@@ -468,7 +473,7 @@ export class MovieDetail {
   }
 
   formatMoney(value: number | null): string {
-    if (value === null) return 'Sin información';
+    if (!value) return 'Sin información'; // the data uses 0 for unknown
 
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

@@ -219,11 +219,11 @@
                     <strong>Idiomas</strong>
                     <span>
                         @for (
-                        language of film.languages;
-                        track $index;
+                        language of uniqueLanguages(film.languages);
+                        track language;
                         let last = $last
                         ) {
-                        {{ language.language_name }}{{ last ? '' : ', ' }}
+                        {{ language }}{{ last ? '' : ', ' }}
                         } @empty {
                         Sin información
                         }
