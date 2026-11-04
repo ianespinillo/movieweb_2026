@@ -7,7 +7,7 @@
     scripts\dev.ps1 -Action stop   -> libera los puertos 3500 y 4200
     scripts\dev.ps1 -Action reset  -> recrea la base PostgreSQL 'movies' desde db/ (pide confirmación)
 
-  Requiere Node.js 20+ y PostgreSQL / MongoDB nativos (no hay contenedores).
+  Requiere Node.js (22.22.3+, 24.15+ o 26+) y PostgreSQL / MongoDB nativos (no hay contenedores).
   En Windows lo normal es ejecutar los .cmd de la raíz (INICIAR / DETENER / RESET_BD).
 #>
 [CmdletBinding()]
@@ -66,8 +66,11 @@ function Test-PortInUse([int]$port) {
 
 function Assert-Node {
     if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-        Fail 'No tenés Node.js instalado.' 'Instalá Node 20 o superior desde https://nodejs.org y volvé a ejecutar.'
+        Fail 'No tenés Node.js instalado.' 'Instalá la versión LTS desde https://nodejs.org y volvé a ejecutar.'
     }
+    # El mismo chequeo de versión que usa npm run dev:setup; el mensaje lo imprime él
+    & node (Join-Path $root 'api\scripts\check-node.mjs')
+    if ($LASTEXITCODE -ne 0) { exit 1 }
     if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
         Fail 'No tenés npm disponible.' 'Reinstalá Node.js (npm viene incluido) desde https://nodejs.org.'
     }
