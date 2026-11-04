@@ -3,8 +3,8 @@
     inset: 0;
     z-index: 1000;
     display: flex;
-    align-items: center;
     justify-content: center;
+    overflow-y: auto; /* on short screens the dialog scrolls instead of being cut off */
     padding: 20px;
     background: rgba(5, 9, 15, .78);
     backdrop-filter: blur(8px);
@@ -12,6 +12,7 @@
 }
 
 .modal-dialog {
+    margin: auto; /* centers it, and unlike align-items keeps the top reachable when it overflows */
     width: 100%;
     max-width: 440px;
     background: #111a27;

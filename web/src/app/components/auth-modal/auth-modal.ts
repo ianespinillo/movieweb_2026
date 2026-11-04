@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../services/auth';
@@ -19,10 +20,22 @@ import { apiErrorMessage } from '../../services/api-response';
   templateUrl: './auth-modal.html',
   styleUrl: './auth-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:keydown.escape)': 'close()',
+  },
 })
 export class AuthModal {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    // The modal lives in the navbar, which stays mounted across pages: close it on navigation.
+    inject(Router)
+      .events.pipe(takeUntilDestroyed())
+      .subscribe(event => {
+        if (event instanceof NavigationEnd) this.close();
+      });
+  }
 
   readonly isOpen = model(false);
   readonly mode = signal<'login' | 'register'>('login');
@@ -45,6 +58,14 @@ export class AuthModal {
 
   close(): void {
     this.isOpen.set(false);
+    // The component outlives the dialog: without this it reopens on the last tab, passwords included
+    this.mode.set('login');
+    this.loginIdentifier.set('');
+    this.loginPassword.set('');
+    this.regUsername.set('');
+    this.regName.set('');
+    this.regEmail.set('');
+    this.regPassword.set('');
     this.errorMessage.set(null);
     this.isLoading.set(false);
   }
@@ -71,7 +92,7 @@ export class AuthModal {
         },
         error: err => {
           this.isLoading.set(false);
-          this.errorMessage.set(apiErrorMessage(err));
+          this.errorMessage.set(this.authErrorMessage(err));
         },
       });
   }
@@ -100,9 +121,17 @@ export class AuthModal {
         },
         error: err => {
           this.isLoading.set(false);
-          this.errorMessage.set(apiErrorMessage(err));
+          this.errorMessage.set(this.authErrorMessage(err));
         },
       });
+  }
+
+  /** The API answers in English; the people using this form read Spanish. */
+  private authErrorMessage(err: { status?: number }): string {
+    if (err.status === 401) return 'Usuario o contraseña incorrectos';
+    if (err.status === 409) return 'Ese nombre de usuario o correo ya está en uso';
+    if (err.status === 400) return 'Revisá los datos: el correo tiene que ser válido y el usuario, de hasta 50 caracteres';
+    return apiErrorMessage(err);
   }
 
   loginDemoUser(user_email: string): void {
