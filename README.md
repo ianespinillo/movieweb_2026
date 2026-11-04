@@ -17,7 +17,7 @@ puntuarlas, escribirles reseñas y seguir la actividad de cada usuario en un tim
 
 ## Requisitos
 
-- [Node.js](https://nodejs.org) 20 o superior (incluye npm).
+- [Node.js](https://nodejs.org) en una versión compatible con Angular 22: **22.22.3 o superior dentro de la 22, 24.15 o superior dentro de la 24, o 26 en adelante** (incluye npm). Para ver la tuya: `node -v`. Si no alcanza, instalá la versión LTS; `npm run dev:setup` también lo avisa.
 - **PostgreSQL** corriendo en el puerto `5432`.
 - **MongoDB** corriendo en el puerto `27017`.
 

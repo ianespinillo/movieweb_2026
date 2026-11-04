@@ -6,6 +6,7 @@
 //
 // Usa la librería pg de la API en lugar de psql, así funciona en cualquier sistema
 // operativo sin tener psql en el PATH. Las credenciales salen de api/.env.
+import './check-node.mjs'; // primero: corta antes de que falle otra cosa con un Node viejo
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
