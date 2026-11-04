@@ -20,11 +20,13 @@ set PGCLIENTENCODING=UTF8
 
 psql --single-transaction -d movies -U postgres -f 00_load_all.sql
 
--- Después, crear las tablas de usuarios, los índices de personas y los datos de prueba:
+-- Después, crear las tablas de usuarios, los índices de personas y los datos de prueba,
+-- y reparar los acentos de los datos:
 
 psql -d movies -U postgres -f 13_users.sql
 psql -d movies -U postgres -f 14_people_indexes.sql
 psql -d movies -U postgres -f 15_seed_users.sql
+psql -d movies -U postgres -f 16_fix_unicode.sql
 
 -- Los usuarios de prueba (ana_cine, bruno_m, carla_r, diego_p) tienen la contraseña movieweb2026.
 
