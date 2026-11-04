@@ -4,7 +4,7 @@ import { badRequest } from '../http/errors.js';
 import { asyncHandler } from '../http/middleware.js';
 import { paginated, readPagination } from '../http/pagination.js';
 import { ok } from '../http/response.js';
-import { containsPattern, readSearchTerm } from '../utils/search.js';
+import { readSearchTerm, searchRegex } from '../utils/search.js';
 import { KeywordMovie, KeywordRow } from '../types/index.js';
 
 const router = Router();
@@ -16,13 +16,14 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     return ok(res, []);
   }
 
-  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit) || '5', 10)), 20);
-  const pattern = containsPattern(q);
+  // Without ?limit= this was NaN, which made the query fail with a 500
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit), 10) || 5), 20);
+  const pattern = searchRegex(q);
 
   const result = await pool.query<KeywordRow>(
     `SELECT keyword_id, keyword_name
      FROM keyword
-     WHERE keyword_name ILIKE $1
+     WHERE keyword_name ~* $1
      ORDER BY length(keyword_name) ASC, keyword_name ASC
      LIMIT $2`,
     [pattern, limit]
@@ -37,7 +38,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
   if (!q) throw badRequest('Query param q is required');
 
   const pagination = readPagination(req);
-  const pattern = containsPattern(q);
+  const pattern = searchRegex(q);
 
   const [pageResult, countResult] = await Promise.all([
     // One row per movie: a movie can match several keywords ("space", "space war", ...),
@@ -49,7 +50,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
        FROM movie m
        JOIN movie_keywords mk ON mk.movie_id = m.movie_id
        JOIN keyword k         ON k.keyword_id = mk.keyword_id
-       WHERE k.keyword_name ILIKE $1
+       WHERE k.keyword_name ~* $1
        GROUP BY m.movie_id
        ORDER BY m.vote_count DESC NULLS LAST, m.title, m.movie_id
        LIMIT $2 OFFSET $3`,
@@ -60,7 +61,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
       `SELECT COUNT(DISTINCT mk.movie_id) AS total
        FROM movie_keywords mk
        JOIN keyword k ON k.keyword_id = mk.keyword_id
-       WHERE k.keyword_name ILIKE $1`,
+       WHERE k.keyword_name ~* $1`,
       [pattern]
     ),
   ]);

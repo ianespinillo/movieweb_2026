@@ -5,7 +5,7 @@ import { asyncHandler } from '../http/middleware.js';
 import { paginated, readPagination } from '../http/pagination.js';
 import { parseId } from '../http/params.js';
 import { ok } from '../http/response.js';
-import { containsPattern, readSearchTerm } from '../utils/search.js';
+import { readSearchTerm, searchRegex } from '../utils/search.js';
 import { ActingCredit, CrewCredit, PersonDetail, PersonRow, PersonSearchResult } from '../types/index.js';
 
 const router = Router();
@@ -16,7 +16,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
   if (!q) throw badRequest('Query param q is required');
 
   const pagination = readPagination(req);
-  const pattern = containsPattern(q);
+  const pattern = searchRegex(q);
 
   // Most `person` rows are crew (sound, makeup, ...), so only people who acted or directed
   // count as results. EXISTS stops at the first matching row instead of reading them all.
@@ -36,7 +36,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
               + (SELECT COUNT(*) FROM movie_crew mw
                  WHERE mw.person_id = p.person_id AND mw.job = 'Director') AS credits
          FROM person p
-         WHERE p.person_name ILIKE $1
+         WHERE p.person_name ~* $1
        ) matches
        WHERE is_actor OR is_director
        ORDER BY credits DESC, person_name, person_id
@@ -46,7 +46,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
     pool.query<{ total: number }>(
       `SELECT COUNT(*) AS total
        FROM person p
-       WHERE p.person_name ILIKE $1
+       WHERE p.person_name ~* $1
          AND (EXISTS (SELECT 1 FROM movie_cast mc WHERE mc.person_id = p.person_id)
               OR EXISTS (SELECT 1 FROM movie_crew mw
                          WHERE mw.person_id = p.person_id AND mw.job = 'Director'))`,

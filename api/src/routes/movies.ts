@@ -6,7 +6,7 @@ import { paginated, readPagination } from '../http/pagination.js';
 import { parseId } from '../http/params.js';
 import { ok } from '../http/response.js';
 import { ReviewModel, toReview } from '../models/review.js';
-import { containsPattern, readSearchTerm } from '../utils/search.js';
+import { readSearchTerm, searchRegex } from '../utils/search.js';
 import {
   CastRow,
   CompanyRow,
@@ -35,20 +35,20 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
   if (!q) throw badRequest('Query param q is required');
 
   const pagination = readPagination(req);
-  const pattern = containsPattern(q);
+  const pattern = searchRegex(q);
 
   // Page and total in parallel. movie_id breaks ties so pages never overlap or skip rows.
   const [pageResult, countResult] = await Promise.all([
     pool.query<MovieSummary>(
       `SELECT movie_id, title, release_date, overview, vote_average, vote_count
        FROM movie
-       WHERE title ILIKE $1
+       WHERE title ~* $1
        ORDER BY vote_count DESC NULLS LAST, title, movie_id
        LIMIT $2 OFFSET $3`,
       [pattern, pagination.limit, pagination.offset]
     ),
     pool.query<{ total: number }>(
-      'SELECT COUNT(*) AS total FROM movie WHERE title ILIKE $1',
+      'SELECT COUNT(*) AS total FROM movie WHERE title ~* $1',
       [pattern]
     ),
   ]);
