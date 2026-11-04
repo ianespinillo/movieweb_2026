@@ -30,11 +30,24 @@ function signToken(user: AuthUser): string {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req: Request, res: Response) => {
-  const { user_username, user_name, user_email, password } = req.body as Partial<RegisterRequest>;
+  const payload = (req.body ?? {}) as Partial<RegisterRequest>;
+  const user_username = typeof payload.user_username === 'string' ? payload.user_username.trim() : '';
+  const user_email = typeof payload.user_email === 'string' ? payload.user_email.trim() : '';
+  const user_name = typeof payload.user_name === 'string' ? payload.user_name.trim() : '';
+  const password = typeof payload.password === 'string' ? payload.password : '';
 
   if (!user_username || !user_email || !password) {
     throw badRequest('user_username, user_email and password are required');
   }
+
+  // Same limits as the columns in db/13_users.sql: past them the INSERT fails with a 500
+  const errors: string[] = [];
+  if (user_username.length > 50) errors.push('user_username must be at most 50 characters');
+  if (user_name.length > 100) errors.push('user_name must be at most 100 characters');
+  if (user_email.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user_email)) {
+    errors.push('user_email must be a valid email address');
+  }
+  if (errors.length > 0) throw badRequest(errors);
 
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
@@ -44,7 +57,7 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
       `INSERT INTO users (user_username, user_name, user_email, password_hash)
        VALUES ($1, $2, $3, $4)
        RETURNING user_id, user_username, user_name, user_email`,
-      [user_username, user_name ?? null, user_email, password_hash]
+      [user_username, user_name || null, user_email, password_hash]
     );
     user = result.rows[0];
   } catch (err: unknown) {
@@ -61,9 +74,9 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
 
 // POST /api/auth/login
 router.post('/login', asyncHandler(async (req: Request, res: Response) => {
-  const { user_email, password } = req.body as Partial<LoginRequest>;
+  const { user_email, password } = (req.body ?? {}) as Partial<LoginRequest>;
 
-  if (!user_email || !password) {
+  if (typeof user_email !== 'string' || !user_email || typeof password !== 'string' || !password) {
     throw badRequest('user_email and password are required');
   }
 
