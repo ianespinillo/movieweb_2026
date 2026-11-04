@@ -13,11 +13,30 @@ export function readSearchTerm(req: Request): string | null {
   return q.length > 0 ? q : null;
 }
 
+// Each plain letter with the accented versions it should also match.
+const ACCENT_VARIANTS: Record<string, string> = {
+  a: 'aáàâäãåāăą', e: 'eéèêëēėęě', i: 'iíìîïīį', o: 'oóòôöõøōő', u: 'uúùûüūůű',
+  n: 'nñńň', c: 'cçćč', s: 'sšśş', z: 'zžźż', y: 'yýÿ', d: 'dđď', l: 'lł', r: 'rř', t: 'tť', g: 'gğ',
+};
+// Letters that do not decompose into base letter + accent
+const STANDALONE: Record<string, string> = { 'ø': 'o', 'đ': 'd', 'ł': 'l' };
+
 /**
- * Builds a "contains" pattern for ILIKE, escaping the LIKE wildcards typed by the user,
- * so that searching "100%" or "a_b" matches those literal characters.
- * Backslash is PostgreSQL's default LIKE escape character.
+ * Builds the regular expression for `column ~* $1`: contains the term, ignoring case and
+ * accents, so "darin" and "darín" both find "Darín". Everything the user typed that is not a
+ * letter or a digit is escaped, so searching "100%" or "a.b" matches those literal characters.
+ *
+ * The accents are expanded in the pattern (d[aá...]r[ií...]n) instead of removing them from
+ * the column, which would mean rewriting all ~105k names on every search.
  */
-export function containsPattern(term: string): string {
-  return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+export function searchRegex(term: string): string {
+  const plain = term.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+
+  return [...plain]
+    .map((char) => {
+      const variants = ACCENT_VARIANTS[STANDALONE[char] ?? char];
+      if (variants) return `[${variants}]`;
+      return /[\p{L}\p{N}\s]/u.test(char) ? char : `\\${char}`;
+    })
+    .join('');
 }

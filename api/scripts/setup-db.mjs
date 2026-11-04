@@ -30,7 +30,7 @@ const MOVIE_DATA_FILES = [
   '12_production_country.sql',
 ];
 // Lo que agrega el TP. Se puede correr más de una vez sin duplicar nada.
-const TP_FILES = ['13_users.sql', '14_people_indexes.sql', '15_seed_users.sql'];
+const TP_FILES = ['13_users.sql', '14_people_indexes.sql', '15_seed_users.sql', '16_fix_unicode.sql'];
 // Colecciones de Mongo que se vacían con --reset, así la API vuelve a cargar su actividad
 // de ejemplo para los usuarios de prueba recién creados.
 const MONGO_COLLECTIONS = ['user_activity', 'reviews'];

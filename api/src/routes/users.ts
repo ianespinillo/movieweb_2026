@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { PoolClient } from 'pg';
 import { pool } from '../config/postgres.js';
-import { badRequest, conflict, forbidden, notFound } from '../http/errors.js';
+import { badRequest, conflict, forbidden, notFound, unauthorized } from '../http/errors.js';
 import { asyncHandler } from '../http/middleware.js';
 import { paginated, readPagination } from '../http/pagination.js';
 import { parseId } from '../http/params.js';
@@ -339,8 +339,11 @@ router.put('/:id/movies/:movieId', authenticate, asyncHandler(async (req: Reques
       return savedMovie;
     });
   } catch (err) {
-    // The user comes from a valid token, so a missing row here is the movie
-    if (pgCode(err) === FOREIGN_KEY_VIOLATION) throw notFound('Movie not found');
+    if (pgCode(err) === FOREIGN_KEY_VIOLATION) {
+      // A valid token whose user was deleted (e.g. the database was reset): log in again
+      if ((err as { constraint?: string }).constraint?.includes('user_id')) throw unauthorized('User no longer exists');
+      throw notFound('Movie not found');
+    }
     throw err;
   }
 
@@ -386,6 +389,10 @@ router.put('/:id/movies/:movieId/review', authenticate, asyncHandler(async (req:
   );
   if (movieResult.rows.length === 0) throw notFound('Movie not found');
   const movieTitle = movieResult.rows[0].title;
+
+  // MongoDB has no foreign keys: without this, a deleted user's token would leave an orphan review
+  const userResult = await pool.query('SELECT 1 FROM users WHERE user_id = $1', [userId]);
+  if (userResult.rows.length === 0) throw unauthorized('User no longer exists');
 
   // includeResultMetadata tells us whether the upsert matched an existing review
   const result = await ReviewModel.findOneAndUpdate(

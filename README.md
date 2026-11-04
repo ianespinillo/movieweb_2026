@@ -95,6 +95,7 @@ Cada uno tiene películas marcadas como favoritas, vistas o puntuadas, y activid
 | `13_users.sql` | Crea las tablas del TP: `users` y `user_movies` |
 | `14_people_indexes.sql` | Índices para la búsqueda de personas |
 | `15_seed_users.sql` | Usuarios de prueba y sus películas |
+| `16_fix_unicode.sql` | Repara los acentos que vienen rotos en los datos del enunciado (`Daru00edn` → `Darín`) |
 | `drop_tp_tables.sql` | Borra solo lo que agrega el TP; las películas quedan |
 
 **MongoDB**: base `movieweb`, con dos colecciones:

@@ -5,10 +5,20 @@
     z-index: 1000;
     width: 100%;
     background: rgba(11, 15, 23, 0.90);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid rgba(94, 230, 255, 0.12);
     box-shadow: 0 4px 25px rgba(0, 0, 0, 0.45);
+}
+
+/* The blur lives on its own layer: backdrop-filter on :host would make it the containing
+   block of the position: fixed login modal, which is rendered inside the navbar. */
+:host::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 * {

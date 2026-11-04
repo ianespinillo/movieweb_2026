@@ -33,4 +33,8 @@ export const routes: Routes = [
     path: 'profile',
     redirectTo: 'dashboard',
   },
+  {
+    path: '**',
+    redirectTo: 'search',
+  },
 ];
