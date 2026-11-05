@@ -108,7 +108,7 @@
                     @if (p.as_crew.length > 0) {
                     <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'crew'"
                         class="tab-btn" [class.active]="activeTab() === 'crew'" (click)="setTab('crew')">
-                        Equipo Técnico ({{ p.as_crew.length }})
+                        Equipo Técnico ({{ crewMovies().length }})
                     </button>
                     }
                 </div>
@@ -149,9 +149,11 @@
                             <span class="role-tag">Director</span>
                         </p>
                         } @else {
-                        <p class="card-role">
-                            {{ getCrewRole(credit) }}
-                        </p>
+                        <div class="role-tags">
+                            @for (role of getCrewRoles(credit); track role) {
+                            <span class="role-tag">{{ role }}</span>
+                            }
+                        </div>
                         }
                     </div>
                 </a>

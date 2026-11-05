@@ -12,7 +12,6 @@ import { catchError, forkJoin, from, map, mergeMap, of, switchMap, tap } from 'r
 
 import type {
   ActingCredit,
-  CrewCredit,
   FilmographyMovie,
   PersonDetail as PersonDetailModel,
   TmdbPersonMeta,
@@ -21,6 +20,9 @@ import type {
 import { PersonService } from '../../services/person';
 
 type FilmographyTab = 'actor' | 'director' | 'crew';
+
+/** A movie the person worked on, with every crew job they held on it. */
+type CrewMovie = FilmographyMovie & { roles: string[] };
 
 @Component({
   selector: 'app-person-detail',
@@ -57,10 +59,26 @@ export class PersonDetail {
     return list;
   });
 
+  // The API returns one row per job, so a movie repeats when the person held several jobs on it.
+  // Map keeps insertion order, which preserves the API's release date sorting.
+  readonly crewMovies = computed(() => {
+    const movies = new Map<number, CrewMovie>();
+    for (const credit of this.person()?.as_crew ?? []) {
+      const role = credit.job || credit.department_name;
+      const movie = movies.get(credit.movie_id);
+      if (!movie) {
+        movies.set(credit.movie_id, { ...credit, roles: [role] });
+      } else if (!movie.roles.includes(role)) {
+        movie.roles.push(role);
+      }
+    }
+    return [...movies.values()];
+  });
+
   readonly totalCredits = computed(() => {
     const p = this.person();
     if (!p) return 0;
-    return p.as_actor.length + p.as_director.length + p.as_crew.length;
+    return p.as_actor.length + p.as_director.length + this.crewMovies().length;
   });
 
   readonly profileUrl = computed(() => {
@@ -77,7 +95,7 @@ export class PersonDetail {
       case 'director':
         return p.as_director;
       case 'crew':
-        return p.as_crew;
+        return this.crewMovies();
     }
   });
 
@@ -172,9 +190,8 @@ export class PersonDetail {
     return (credit as ActingCredit).character_name || 'Personaje no especificado';
   }
 
-  getCrewRole(credit: FilmographyMovie): string {
-    const c = credit as CrewCredit;
-    return c.job ? `${c.job} (${c.department_name})` : c.department_name;
+  getCrewRoles(credit: FilmographyMovie): string[] {
+    return (credit as CrewMovie).roles;
   }
 
   private loadPostersForCredits(credits: FilmographyMovie[]): void {
