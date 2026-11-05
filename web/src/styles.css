@@ -4,3 +4,18 @@ body {
   min-height: 100%;
   background-color: #0b0f17;
 }
+
+html {
+  font-family: Inter, Arial, sans-serif;
+}
+
+body {
+  color: #f5f7fa;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
