@@ -206,7 +206,7 @@ export class Search {
         this.moviesPage.set(movies.data.page);
         this.moviesTotalPages.set(movies.data.totalPages);
 
-        this.loadPosters(movies.data.items.slice(0, 8));
+        this.loadPosters(movies.data.items);
       }
 
       if (keywordMovies.data) {
@@ -214,7 +214,7 @@ export class Search {
         this.keywordPage.set(keywordMovies.data.page);
         this.keywordTotalPages.set(keywordMovies.data.totalPages);
 
-        this.loadPosters(keywordMovies.data.items.slice(0, 8));
+        this.loadPosters(keywordMovies.data.items);
       }
 
       if (people.data) {
@@ -397,10 +397,7 @@ export class Search {
 
   // Fotografías de actores y directores
   private loadPhotos(): void {
-    const people = [
-      ...this.actors().slice(0, 5),
-      ...this.directors().slice(0, 5),
-    ];
+    const people = [...this.actors(), ...this.directors()];
 
     const unique = people.filter(
       (person, index, list) =>
@@ -541,7 +538,7 @@ export class Search {
         this.moviesTotalPages.set(result.totalPages);
 
         this.loadingMoreMovies.set(false);
-        this.loadPosters(result.items.slice(0, 8));
+        this.loadPosters(result.items);
       },
 
       error: error => {
@@ -585,7 +582,7 @@ export class Search {
         this.keywordTotalPages.set(result.totalPages);
 
         this.loadingMoreKeywords.set(false);
-        this.loadPosters(result.items.slice(0, 8));
+        this.loadPosters(result.items);
       },
 
       error: error => {
