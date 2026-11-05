@@ -20,12 +20,6 @@
                 (keydown)="onKeydown($event)"
             />
 
-            @if (searchQuery()) {
-            <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Borrar búsqueda">
-                ✕
-            </button>
-            }
-
             <button type="button" class="navbar-search-btn" (click)="search()" aria-label="Ejecutar búsqueda">
                 Buscar
             </button>

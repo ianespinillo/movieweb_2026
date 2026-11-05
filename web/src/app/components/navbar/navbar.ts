@@ -243,13 +243,6 @@ export class Navbar {
     this.search();
   }
 
-  clearSearch(): void {
-    this.searchQuery.set('');
-    this.autocompleteSuggestions.set([]);
-    this.showAutocomplete.set(false);
-    this.activeSuggestionIndex.set(-1);
-  }
-
   search(): void {
     const query = this.searchQuery().trim();
     this.showAutocomplete.set(false);

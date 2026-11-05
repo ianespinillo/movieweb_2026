@@ -101,21 +101,6 @@
     color: #6d8296;
 }
 
-.clear-search-btn {
-    background: transparent;
-    border: none;
-    color: #7f95aa;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 4px;
-    transition: color 0.15s ease;
-}
-
-.clear-search-btn:hover {
-    color: #ef4444;
-}
-
 .navbar-search-btn {
     padding: 8px 18px;
     border: 1px solid #7feaff;
