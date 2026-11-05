@@ -11,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, Title } from '@angular/platform-browser';
 
 import {
   catchError,
@@ -40,6 +40,8 @@ import { ReviewService } from '../../services/review';
 import { apiErrorMessage } from '../../services/api-response';
 import { TMDB_ROUTES } from '../../services/api-routes';
 
+const APP_TITLE = 'MovieWeb';
+
 interface ApiResponse<T> {
   success: true;
   data: T;
@@ -62,6 +64,7 @@ export class MovieDetail {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly pageTitle = inject(Title);
 
   readonly movie = signal<MovieDetailModel | null>(null);
   readonly tmdb = signal<TmdbMovieMeta | null>(null);
@@ -226,6 +229,13 @@ export class MovieDetail {
         this.userMovie.set(null);
       }
     });
+
+    effect(() => {
+      const title = this.movie()?.title;
+      this.pageTitle.setTitle(title ? `${title} | ${APP_TITLE}` : APP_TITLE);
+    });
+
+    this.destroyRef.onDestroy(() => this.pageTitle.setTitle(APP_TITLE));
   }
 
   loadUserMovie(movieId: number): void {
