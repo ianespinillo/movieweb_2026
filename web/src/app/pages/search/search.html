@@ -1,71 +1,7 @@
 <main class="search-page">
 
     @if (!hasSearched()) {
-
-    <header class="search-header">
-        <p class="eyebrow">BUSCÁ · DESCUBRÍ · EXPLORÁ</p>
-
-        <h1>
-            Descubrí tu próxima
-            <span class="accent-text">gran historia.</span>
-        </h1>
-
-        <p>Encontrá películas por título, actores, directores o palabras clave temáticas.</p>
-    </header>
-
-    <section class="result-section suggestions-section">
-        <h2>Descubrí estas películas</h2>
-
-        <p class="section-description">
-            Algunas historias para empezar a explorar MovieWeb.
-        </p>
-
-        @if (loadingSuggestions() && suggestedMovies().length === 0) {
-        <p class="status-message">
-            Cargando películas sugeridas...
-        </p>
-        }
-
-        <div class="poster-grid">
-            @for (movie of suggestedMovies(); track movie.movie_id) {
-            <a class="poster-card" [routerLink]="['/movies', movie.movie_id]">
-                <div class="poster-image">
-                    @if (posters()[movie.movie_id]; as poster) {
-                    <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" width="342" height="513" />
-                    } @else {
-                    <div class="image-placeholder">
-                        <span>MovieWeb</span>
-                    </div>
-                    }
-                </div>
-
-                <div class="poster-info">
-                    <h3>{{ movie.title }}</h3>
-
-                    <div class="poster-meta">
-                        <span>
-                            {{ movie.release_date?.slice(0, 4) || 'Sin año' }}
-                        </span>
-
-                        @if (movie.vote_average !== null) {
-                        <span class="rating">
-                            ★ {{ movie.vote_average.toFixed(1) }}
-                        </span>
-                        }
-                    </div>
-                </div>
-            </a>
-            }
-        </div>
-
-        @if (!loadingSuggestions() && suggestedMovies().length === 0) {
-        <p class="empty-message">
-            No se pudieron cargar las sugerencias.
-            Podés buscar cualquier película arriba en el navbar.
-        </p>
-        }
-    </section>
-
+    <app-home />
     } @else {
 
     <div class="search-results">

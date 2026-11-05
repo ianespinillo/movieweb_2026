@@ -11,6 +11,7 @@ import {
   Router,
   RouterLink,
 } from '@angular/router';
+import { Home } from '../home/home';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -53,7 +54,7 @@ interface ApiResponse<T> {
 
 @Component({
   selector: 'app-search',
-  imports: [RouterLink],
+  imports: [RouterLink, Home],
   templateUrl: './search.html',
   styleUrl: './search.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,7 +117,7 @@ export class Search {
   ];
 
   constructor() {
-    this.loadSuggestions();
+
 
     // Búsqueda normal
     this.searchRequests.pipe(

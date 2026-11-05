@@ -1,0 +1,188 @@
+<main class="home-page">
+  <header class="home-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">MOVIEWEB · TU UNIVERSO DE CINE</p>
+      <h1>Historias que merecen <span>ser descubiertas.</span></h1>
+      <p>Encontrá tu próxima película, explorá el talento detrás de cámara y guardá tus favoritas.</p>
+      <div class="hero-actions">
+        <a routerLink="/search" [queryParams]="{ q: 'action' }" class="action-primary">Explorar películas de acción <span aria-hidden="true">→</span></a>
+        @if (currentUser()) { <a routerLink="/dashboard" class="action-secondary">Mi panel</a> } @else { <button type="button" class="action-secondary" (click)="openLogin()">Crear mi espacio</button> }
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      @for (movie of featured().slice(0, 3); track movie.movie_id) {
+        <div class="hero-mini-poster">
+          @if (posters()[movie.movie_id]; as poster) { <img [src]="poster" alt="" /> }
+        </div>
+      }
+    </div>
+  </header>
+
+  <section class="home-section" aria-labelledby="featured-heading">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">PARA EMPEZAR</p>
+        <h2 id="featured-heading">Destacadas de MovieWeb</h2>
+        <p>Una selección de películas reconocidas para seguir explorando.</p>
+      </div>
+      
+    </div>
+    @if (moviesLoading() && !featured().length) {
+      <p class="loading-state">Cargando películas...</p>
+    }
+    <div #featuredRail class="horizontal-rail" aria-label="Películas destacadas">
+      @for (movie of featured(); track movie.movie_id) {
+        <a class="movie-card" [routerLink]="['/movies', movie.movie_id]">
+          <div class="card-poster">
+            @if (posters()[movie.movie_id]; as poster) {
+              <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" />
+            } @else { <div class="poster-placeholder">MovieWeb</div> }
+          </div>
+          <h3>{{ movie.title }}</h3>
+          <p class="card-meta">{{ movie.release_date?.slice(0,4) || 'Sin año' }}
+            @if (movie.vote_average !== null) { <span>★ {{ movie.vote_average.toFixed(1) }}/10</span> }
+          </p>
+        </a>
+      }
+    </div>
+  </section>
+
+  @if (topRated().length) {
+    <section class="home-section" aria-labelledby="rated-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">ESTILO RANKING</p>
+          <h2 id="rated-heading">Las mejor valoradas de la selección</h2>
+          <p>Ordenadas por la valoración que figura en la base de MovieWeb, no por IMDb.</p>
+        </div>
+      </div>
+      <div #ratedRail class="horizontal-rail" aria-label="Películas mejor valoradas">
+        @for (movie of topRated(); track movie.movie_id; let i = $index) {
+          <a class="movie-card ranking-card" [routerLink]="['/movies', movie.movie_id]">
+            <div class="card-poster">
+              @if (posters()[movie.movie_id]; as poster) {
+                <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" />
+              } @else { <div class="poster-placeholder">MovieWeb</div> }
+              <span class="rank-badge">#{{ i + 1 }}</span>
+            </div>
+            <h3>{{ movie.title }}</h3>
+            <p class="card-meta"><span>★ {{ movie.vote_average?.toFixed(1) }}/10</span> · {{ movie.vote_count }} votos</p>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  @if (trailers().length || trailerLoading()) {
+    <section class="home-section" aria-labelledby="trailers-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">DALE PLAY</p>
+          <h2 id="trailers-heading">Tráilers para descubrir</h2>
+          <p>Explorá avances oficiales disponibles en YouTube a través de TMDB.</p>
+        </div>
+        @if (trailers().length > 1) {
+          <div class="carousel-actions">
+            <button type="button" (click)="changeTrailer(-1)" aria-label="Tráiler anterior">‹</button>
+            <button type="button" (click)="changeTrailer(1)" aria-label="Tráiler siguiente">›</button>
+          </div>
+        }
+      </div>
+      @if (trailers()[activeTrailer()]; as selected) {
+        <div class="trailer-layout">
+          <div class="video-wrap">
+            @if (trailerUrl(); as url) {
+              <iframe [src]="url" [title]="'Tráiler de ' + selected.title" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+            }
+          </div>
+          <div class="trailer-side">
+            <span class="section-kicker">EN REPRODUCCIÓN</span>
+            <h3>{{ selected.title }}</h3>
+            <p>{{ selected.name }}</p>
+            <a [routerLink]="['/movies', selected.movie_id]" class="section-link">Ver película →</a>
+            <div class="trailer-dots" aria-label="Elegir tráiler">
+              @for (clip of trailers(); track clip.movie_id; let i = $index) {
+                <button type="button" (click)="selectTrailer(i)" [class.active]="i === activeTrailer()" [attr.aria-label]="'Ver tráiler de ' + clip.title" [attr.aria-pressed]="i === activeTrailer()"></button>
+              }
+            </div>
+          </div>
+        </div>
+      } @else {
+        <p class="loading-state">Buscando tráilers disponibles...</p>
+      }
+    </section>
+  }
+
+  @if (people().length || peopleLoading()) {
+    <section class="home-section" aria-labelledby="actors-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">DELANTE DE CÁMARA</p>
+          <h2 id="actors-heading">Explorá grandes intérpretes</h2>
+          <p>Descubrí sus películas y filmografías completas.</p>
+        </div>
+      </div>
+      @if (peopleLoading() && !people().length) { <p class="loading-state">Cargando actores...</p> }
+      <div #actorsRail class="actors-rail" aria-label="Actores destacados">
+        @for (person of people(); track person.person_id) {
+          <a [routerLink]="['/people', person.person_id]" class="actor-card">
+            <div class="actor-photo">
+              @if (person.photo; as photo) {
+                <img [src]="photo" [alt]="'Foto de ' + person.person_name" loading="lazy" />
+              } @else { <span aria-hidden="true">◉</span> }
+            </div>
+            <h3>{{ person.person_name }}</h3>
+            <p>Ver filmografía →</p>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  @if (currentUser(); as user) {
+    <section class="home-section personalized-section" aria-labelledby="personalized-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">TU ESPACIO</p>
+          <h2 id="personalized-heading">{{ personalizedKind() === 'favorites' ? 'Tus películas favoritas' : 'Ya las viste. ¡Dejá tu reseña!' }}</h2>
+          <p>{{ personalizedKind() === 'favorites' ? 'Volvé a las historias que guardaste y contanos qué te parecieron.' : 'Tu próxima reseña puede ayudar a otros a elegir qué mirar.' }}</p>
+        </div>
+        <a routerLink="/dashboard" class="section-link">Ver mi panel →</a>
+      </div>
+      @if (userLoading()) {
+        <p class="loading-state">Cargando tu colección...</p>
+      } @else if (userError()) {
+        <p class="loading-state">No se pudo cargar tu colección. Intentá recargar la página.</p>
+      } @else if (personalized().length) {
+        <div #personalRail class="horizontal-rail" aria-label="Tus películas">
+          @for (movie of personalized(); track movie.movie_id) {
+            <a class="movie-card" [routerLink]="['/movies', movie.movie_id]">
+              <div class="card-poster">
+                @if (posters()[movie.movie_id]; as poster) {
+                  <img [src]="poster" [alt]="'Póster de ' + movie.title" loading="lazy" />
+                } @else { <div class="poster-placeholder">MovieWeb</div> }
+                <span class="poster-flag">{{ personalizedKind() === 'favorites' ? '♥ Favorita' : '✓ Vista' }}</span>
+              </div>
+              <h3>{{ movie.title }}</h3>
+              <p class="card-meta">{{ movie.release_date?.slice(0,4) || 'Sin año' }}</p>
+              <span class="review-invite">{{ movie.review ? 'Ver tu reseña →' : '¡Dejá tu reseña! →' }}</span>
+            </a>
+          }
+        </div>
+      } @else {
+        <div class="empty-personalized">
+          Todavía no marcaste películas como favoritas o vistas.
+          <a routerLink="/search">Encontrá una para empezar →</a>
+        </div>
+      }
+    </section>
+  }
+
+
+  @if (!currentUser()) {
+    <section class="closing-banner">
+      <div><p class="section-kicker">HACÉLA TUYA</p><h2>Tu próxima favorita te está esperando.</h2><p>Ingresá para guardar películas, calificarlas y escribir reseñas.</p></div>
+      <button type="button" (click)="openLogin()">Iniciar sesión →</button>
+    </section>
+  }
+</main>

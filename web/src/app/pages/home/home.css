@@ -1,0 +1,43 @@
+:host{display:block;min-height:100vh;background:#0b0f17;color:#f5f7fa;font-family:Inter,Arial,sans-serif}
+*{box-sizing:border-box}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+.home-page{max-width:1240px;margin:0 auto;padding:32px 28px 90px}
+.home-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:32px;min-height:370px;padding:52px 55px;overflow:hidden;border-radius:26px;border:1px solid #25445b;background:radial-gradient(ellipse at 85% 40%,rgba(94,230,255,.19),transparent 58%),linear-gradient(110deg,#152739,#101622 78%);box-shadow:0 22px 55px rgba(0,0,0,.24)}
+.hero-copy{position:relative;z-index:2;max-width:680px}
+.eyebrow,.section-kicker{color:#73def5;font-size:11px;font-weight:800;letter-spacing:2.7px;margin:0 0 15px}
+.home-hero h1{font-size:clamp(34px,4.5vw,58px);letter-spacing:-2px;line-height:1.1;margin:0 0 20px}
+.home-hero h1 span{color:#83e4f6}
+.home-hero .hero-copy>p:not(.eyebrow){color:#b0c4d5;line-height:1.7;font-size:16px;margin:0;max-width:600px}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.action-primary,.action-secondary{display:inline-flex;align-items:center;gap:13px;padding:13px 20px;border-radius:11px;font-weight:700;font-size:14px}
+.action-primary{background:#74e4f8;color:#0a1b27}.action-secondary{border:1px solid #40647a;background:#172b3e;color:#d9f5ff}
+.hero-art{display:flex;flex-shrink:0;align-items:center;transform:rotate(7deg) translateX(25px)}
+.hero-mini-poster{width:118px;height:175px;overflow:hidden;background:#20374a;border:3px solid #243f52;border-radius:11px;margin-left:-40px;box-shadow:0 15px 30px #0008}
+.hero-mini-poster:nth-child(2){transform:translateY(-25px)}.hero-mini-poster img{width:100%;height:100%;object-fit:cover}
+.home-section{margin-top:53px}.section-heading{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}.section-heading h2{font-size:clamp(22px,2.4vw,30px);letter-spacing:-.5px;margin:0 0 6px}.section-heading p:not(.section-kicker){margin:0;color:#90a9bf;font-size:14px;line-height:1.6}.section-link{color:#84e7f9;font-size:14px;font-weight:700;white-space:nowrap}.section-link:hover{text-decoration:underline}
+.horizontal-rail,.actors-rail{display:flex;overflow-x:auto;gap:17px;padding:5px 3px 16px;scroll-snap-type:x proximity;scrollbar-color:#35536a transparent}
+.movie-card{flex:0 0 173px;min-width:0;scroll-snap-align:start;transition:transform .2s ease}.movie-card:hover{transform:translateY(-5px)}
+.card-poster{aspect-ratio:2/3;position:relative;overflow:hidden;background:linear-gradient(145deg,#20374a,#111d2c);border-radius:13px;border:1px solid #35536b}
+.card-poster img{width:100%;height:100%;object-fit:cover;display:block}.poster-placeholder{display:grid;place-items:center;height:100%;font-weight:800;color:#79b8cc}
+.movie-card h3{font-size:14px;margin:12px 0 5px;line-height:1.35}.card-meta{color:#95aec2;font-size:12px;margin:0;line-height:1.5}.card-meta span{color:#f7cb72}.poster-flag,.rank-badge{position:absolute;top:9px;left:9px;padding:6px 8px;border-radius:8px;background:#10283aee;border:1px solid #6ad6ed;color:#8aefff;font-size:11px;font-weight:800}.rank-badge{background:#0c1520ed;color:#f8cb70;border-color:#b4975a}
+.review-invite{display:inline-block;color:#78e6f7;font-weight:700;font-size:12px;margin-top:10px}.personalized-section{border:1px solid #2a5064;background:linear-gradient(115deg,#142736,#101b2a);border-radius:21px;padding:27px}.empty-personalized,.loading-state{padding:23px;color:#a9c0d1;background:#142131;border:1px solid #263e52;border-radius:12px}.empty-personalized a{display:block;margin-top:10px;color:#7fe9f7;font-weight:700}
+.trailer-layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(210px,1fr);gap:0;border:1px solid #2a4355;border-radius:19px;overflow:hidden;background:#142131}.video-wrap{aspect-ratio:16/9;background:#07111d}.video-wrap iframe{display:block;width:100%;height:100%;border:0}.trailer-side{padding:30px;display:flex;flex-direction:column;justify-content:center}.trailer-side h3{font-size:27px;margin:6px 0}.trailer-side>p{color:#a7c0d1;line-height:1.5}.carousel-actions{display:flex;gap:9px}.carousel-actions button{background:#183448;border:1px solid #31576f;color:#a1ebfa;width:38px;height:38px;font-size:25px;border-radius:10px}.carousel-actions button:hover{background:#23516b}.trailer-dots{display:flex;flex-wrap:wrap;gap:9px;margin-top:28px}.trailer-dots button{width:28px;height:7px;border-radius:8px;border:0;background:#3b566b}.trailer-dots button.active{background:#82ebfa}
+.actors-rail{gap:20px}.actor-card{flex:0 0 153px;scroll-snap-align:start}.actor-photo{aspect-ratio:3/4;overflow:hidden;background:#192a3d;border:1px solid #304e64;border-radius:16px;display:grid;place-items:center}.actor-photo img{height:100%;width:100%;object-fit:cover}.actor-photo span{font-size:40px;color:#80c4da}.actor-card h3{font-size:14px;margin:11px 0 4px}.actor-card p{font-size:12px;color:#82dfef;margin:0}.actor-card:hover .actor-photo{border-color:#80eaff}
+.closing-banner{display:flex;justify-content:space-between;align-items:center;gap:30px;margin-top:60px;padding:38px;background:linear-gradient(120deg,#16334a,#111c2b);border-radius:20px;border:1px solid #376075}.closing-banner h2{font-size:27px;margin:0 0 8px}.closing-banner p:not(.section-kicker){color:#adcbdb;margin:0}.closing-banner button{background:#75e5f8;color:#081924;font-weight:800;border:0;border-radius:11px;padding:14px 20px;white-space:nowrap}
+@media(max-width:850px){.hero-art{display:none}.home-hero{min-height:0}.trailer-layout{grid-template-columns:1fr}.trailer-side{padding:22px}}
+@media(max-width:600px){.home-page{padding:16px 15px 70px}.home-hero{padding:34px 25px}.home-hero h1{letter-spacing:-1px}.section-heading{align-items:start;flex-direction:column;gap:10px}.movie-card{flex-basis:145px}.actor-card{flex-basis:125px}.personalized-section{padding:18px}.closing-banner{align-items:start;flex-direction:column;padding:25px}.closing-banner h2{font-size:23px}}
+@media(prefers-reduced-motion:reduce){.movie-card{transition:none}}
+
+/* Seven actor cards fit across a 1200px desktop row. */
+@media (min-width: 1100px) { .actors-rail { gap: 15px; } .actor-card { flex-basis: 149px; } }
+.action-secondary { cursor: pointer; }
+
+/* Evita que el navegador desplace los carruseles
+   mientras se cargan las tarjetas. */
+.horizontal-rail,
+.actors-rail {
+  overflow-anchor: none;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 0;
+}
