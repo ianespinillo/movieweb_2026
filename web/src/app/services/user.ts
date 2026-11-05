@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import type { ApiResponse, UserMovie, UserMovieKey, UserMovieRequest } from '@movieweb/contracts';
+import type { ApiResponse, User, UserMovie, UserMovieKey, UserMovieRequest } from '@movieweb/contracts';
 import { USER_ROUTES } from './api-routes';
 import { unwrap } from './api-response';
 
@@ -25,6 +25,13 @@ export class UserService {
   ): Observable<UserMovie | null> {
     return this.http
       .put<ApiResponse<UserMovie | null>>(USER_ROUTES.movie(userId, movieId), marks)
+      .pipe(unwrap());
+  }
+
+  /** Deletes the account (owner only); the API also removes its movie list, activity and reviews. */
+  deleteUser(userId: number): Observable<User> {
+    return this.http
+      .delete<ApiResponse<User>>(USER_ROUTES.detail(userId))
       .pipe(unwrap());
   }
 

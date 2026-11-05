@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -15,6 +17,7 @@ import { catchError, forkJoin, from, map, mergeMap, of } from 'rxjs';
 import type { ActivityEvent, UserMovie } from '@movieweb/contracts';
 import { AuthService } from '../../services/auth';
 import { UserService } from '../../services/user';
+import { apiErrorMessage } from '../../services/api-response';
 import { ActivityService } from '../../services/activity';
 import { Movie as MovieService } from '../../services/movie';
 
@@ -28,6 +31,9 @@ export type SortOrder = 'desc' | 'asc';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:keydown.escape)': 'closeDeleteDialog()',
+  },
 })
 export class Dashboard {
   private readonly authService = inject(AuthService);
@@ -69,7 +75,15 @@ export class Dashboard {
     this.sortMovies(this.ratedMovies(), this.sortField(), this.sortOrder())
   );
 
+  readonly showDeleteDialog = signal(false);
+  readonly isDeleting = signal(false);
+  readonly deleteError = signal<string | null>(null);
+  private readonly deleteDialog = viewChild<ElementRef<HTMLElement>>('deleteDialog');
+
   constructor() {
+    // The dialog is rendered by @if: move focus into it as soon as it exists
+    effect(() => this.deleteDialog()?.nativeElement.focus());
+
     effect(() => {
       const user = this.currentUser();
       if (user) {
@@ -167,6 +181,41 @@ export class Dashboard {
 
   openLoginModal(): void {
     this.authService.openModal();
+  }
+
+  openDeleteDialog(): void {
+    this.deleteError.set(null);
+    this.showDeleteDialog.set(true);
+  }
+
+  closeDeleteDialog(): void {
+    if (this.isDeleting()) return;
+    this.showDeleteDialog.set(false);
+    this.deleteError.set(null);
+  }
+
+  confirmDeleteAccount(): void {
+    const user = this.currentUser();
+    if (!user || this.isDeleting()) return;
+
+    this.isDeleting.set(true);
+    this.deleteError.set(null);
+
+    this.userService
+      .deleteUser(user.user_id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isDeleting.set(false);
+          this.showDeleteDialog.set(false);
+          this.authService.logout();
+          void this.router.navigate(['/search']);
+        },
+        error: err => {
+          this.isDeleting.set(false);
+          this.deleteError.set(apiErrorMessage(err));
+        },
+      });
   }
 
   getEventIcon(type: string): string {

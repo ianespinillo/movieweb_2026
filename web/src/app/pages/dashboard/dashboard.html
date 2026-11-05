@@ -334,6 +334,48 @@
 
     }
 
+    <!-- Zona de riesgo: eliminar cuenta -->
+    <section class="danger-zone" aria-label="Zona de riesgo">
+        <p>Eliminar tu cuenta borra de forma permanente tus datos en MovieWeb.</p>
+        <button type="button" class="btn-danger-outline" (click)="openDeleteDialog()">
+            Eliminar mi cuenta
+        </button>
+    </section>
+
+    }
+
+    @if (showDeleteDialog()) {
+    <div class="modal-backdrop" (click)="closeDeleteDialog()">
+        <div
+            #deleteDialog
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            aria-describedby="delete-account-desc"
+            tabindex="-1"
+            (click)="$event.stopPropagation()"
+        >
+            <h2 id="delete-account-title">¿Eliminar tu cuenta?</h2>
+            <p id="delete-account-desc">
+                Esta acción no se puede deshacer. Se eliminarán tu cuenta, tu lista de películas,
+                tu historial de actividad y tus reseñas.
+            </p>
+
+            @if (deleteError(); as message) {
+            <div class="error-banner" role="alert">{{ message }}</div>
+            }
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" [disabled]="isDeleting()" (click)="closeDeleteDialog()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn-danger" [disabled]="isDeleting()" (click)="confirmDeleteAccount()">
+                    {{ isDeleting() ? 'Eliminando...' : 'Eliminar cuenta' }}
+                </button>
+            </div>
+        </div>
+    </div>
     }
 
 </main>
